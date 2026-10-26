@@ -23,6 +23,7 @@ import {
   McpServerException,
   McpServerExceptionCode,
 } from 'src/engine/metadata-modules/mcp-server/mcp-server.exception';
+import { McpServerToolSyncService } from 'src/engine/metadata-modules/mcp-server/services/mcp-server-tool-sync.service';
 import { type UpdateMcpServerInput } from 'src/engine/metadata-modules/mcp-server/dtos/update-mcp-server.input';
 import { WorkspaceMigrationBuilderException } from 'src/engine/workspace-manager/workspace-migration/exceptions/workspace-migration-builder-exception';
 import { WorkspaceMigrationValidateBuildAndRunService } from 'src/engine/workspace-manager/workspace-migration/services/workspace-migration-validate-build-and-run-service';
@@ -34,6 +35,7 @@ export class McpServerService {
     private readonly workspaceManyOrAllFlatEntityMapsCacheService: WorkspaceManyOrAllFlatEntityMapsCacheService,
     private readonly applicationService: ApplicationService,
     private readonly connectedAccountMetadataService: ConnectedAccountMetadataService,
+    private readonly mcpServerToolSyncService: McpServerToolSyncService,
   ) {}
 
   async findAll(workspaceId: string): Promise<McpServerDTO[]> {
@@ -90,12 +92,7 @@ export class McpServerService {
         'Multiple validation errors occurred while creating MCP server',
     });
 
-    return fromFlatMcpServerToMcpServerDto(
-      findFlatEntityByIdInFlatEntityMapsOrThrow({
-        flatEntityId: flatMcpServerToCreate.id,
-        flatEntityMaps: await this.getFlatMcpServerMaps(workspaceId),
-      }),
-    );
+    return this.syncTools(flatMcpServerToCreate.id, workspaceId);
   }
 
   async update(
@@ -112,6 +109,11 @@ export class McpServerService {
     await this.assertConnectedAccountIsWorkspaceSharedOrThrow({
       connectedAccountId,
       workspaceId,
+    });
+
+    const existingFlatMcpServer = findFlatMcpServerByIdOrThrow({
+      flatMcpServerMaps: await this.getFlatMcpServerMaps(workspaceId),
+      mcpServerId: input.id,
     });
 
     const flatMcpServerToUpdate =
@@ -134,9 +136,34 @@ export class McpServerService {
         'Multiple validation errors occurred while updating MCP server',
     });
 
+    const hasConnectionChanged =
+      flatMcpServerToUpdate.url !== existingFlatMcpServer.url ||
+      flatMcpServerToUpdate.connectedAccountId !==
+        existingFlatMcpServer.connectedAccountId;
+
+    if (hasConnectionChanged) {
+      return this.syncTools(input.id, workspaceId);
+    }
+
     return fromFlatMcpServerToMcpServerDto(
       findFlatEntityByIdInFlatEntityMapsOrThrow({
         flatEntityId: input.id,
+        flatEntityMaps: await this.getFlatMcpServerMaps(workspaceId),
+      }),
+    );
+  }
+
+  async syncTools(id: string, workspaceId: string): Promise<McpServerDTO> {
+    await this.mcpServerToolSyncService.syncTools(
+      findFlatMcpServerByIdOrThrow({
+        flatMcpServerMaps: await this.getFlatMcpServerMaps(workspaceId),
+        mcpServerId: id,
+      }),
+    );
+
+    return fromFlatMcpServerToMcpServerDto(
+      findFlatEntityByIdInFlatEntityMapsOrThrow({
+        flatEntityId: id,
         flatEntityMaps: await this.getFlatMcpServerMaps(workspaceId),
       }),
     );

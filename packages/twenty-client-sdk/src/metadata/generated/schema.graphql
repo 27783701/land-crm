@@ -2922,8 +2922,18 @@ type McpServer {
   isActive: Boolean!
   label: String!
   name: String!
+  tools: [McpServerTool!]!
+  toolsSyncError: String
+  toolsSyncedAt: DateTime
   updatedAt: DateTime!
   url: String!
+}
+
+type McpServerTool {
+  annotations: JSON
+  description: String
+  inputSchema: JSON!
+  name: String!
 }
 
 type MessageCampaignBodyConfiguration {
@@ -3371,6 +3381,7 @@ type Mutation {
   switchSubscriptionInterval: BillingUpdate!
   syncApplication(dryRun: Boolean, inferDeletionFromMissingEntities: Boolean, manifest: JSON!): WorkspaceMigration!
   syncMarketplaceCatalog: Boolean!
+  syncMcpServerTools(id: UUID!): McpServer!
   trackAnalytics(event: String, name: String, properties: JSON, type: AnalyticsType!): Analytics!
   transferApplicationRegistrationOwnership(applicationRegistrationId: String!, targetWorkspaceSubdomain: String!): ApplicationRegistration!
   triggerAddPeopleToMessageListJob(input: TriggerAddPeopleToMessageListJobInput!): TriggerAddPeopleToMessageListJobResult!

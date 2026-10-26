@@ -75,6 +75,14 @@ export class McpServerResolver {
   }
 
   @Mutation(() => McpServerDTO)
+  async syncMcpServerTools(
+    @Args('id', { type: () => UUIDScalarType }) id: string,
+    @AuthWorkspace() workspace: WorkspaceEntity,
+  ): Promise<McpServerDTO> {
+    return await this.mcpServerService.syncTools(id, workspace.id);
+  }
+
+  @Mutation(() => McpServerDTO)
   async deleteMcpServer(
     @Args('id', { type: () => UUIDScalarType }) id: string,
     @AuthWorkspace() workspace: WorkspaceEntity,

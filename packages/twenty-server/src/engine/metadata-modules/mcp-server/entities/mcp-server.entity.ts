@@ -10,9 +10,11 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+import { ADD_TOOLS_TO_MCP_SERVER_UPGRADE_COMMAND_NAME } from 'src/database/commands/upgrade-version-command/2-52/add-tools-to-mcp-server-upgrade-command-name.constant';
 import { ADD_MCP_SERVER_UPGRADE_COMMAND_NAME } from 'src/database/commands/upgrade-version-command/2-52/add-mcp-server-upgrade-command-name.constant';
 import { WasIntroducedInUpgrade } from 'src/engine/core-modules/upgrade/decorators/was-introduced-in-upgrade.decorator';
 import { ConnectedAccountEntity } from 'src/engine/metadata-modules/connected-account/entities/connected-account.entity';
+import { type McpServerTool } from 'src/engine/metadata-modules/mcp-server/types/mcp-server-tool.type';
 import { SyncableEntity } from 'src/engine/workspace-manager/types/syncable-entity.interface';
 
 @Entity({ name: 'mcpServer', schema: 'core' })
@@ -51,6 +53,24 @@ export class McpServerEntity
 
   @Column({ nullable: false, type: 'boolean', default: true })
   isActive: boolean;
+
+  @WasIntroducedInUpgrade({
+    upgradeCommandName: ADD_TOOLS_TO_MCP_SERVER_UPGRADE_COMMAND_NAME,
+  })
+  @Column({ nullable: false, type: 'jsonb', default: [] })
+  tools: McpServerTool[];
+
+  @WasIntroducedInUpgrade({
+    upgradeCommandName: ADD_TOOLS_TO_MCP_SERVER_UPGRADE_COMMAND_NAME,
+  })
+  @Column({ nullable: true, type: 'timestamptz' })
+  toolsSyncedAt: Date | null;
+
+  @WasIntroducedInUpgrade({
+    upgradeCommandName: ADD_TOOLS_TO_MCP_SERVER_UPGRADE_COMMAND_NAME,
+  })
+  @Column({ nullable: true, type: 'text' })
+  toolsSyncError: string | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
