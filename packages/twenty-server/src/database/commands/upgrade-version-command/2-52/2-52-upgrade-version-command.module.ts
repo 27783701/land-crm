@@ -6,6 +6,7 @@ import { BackfillFilesRecordFormWidgetsCommand } from 'src/database/commands/upg
 import { SeedWorkspaceFrontendDependenciesCommand } from 'src/database/commands/upgrade-version-command/2-52/2-52-workspace-command-1792766943126-seed-workspace-frontend-dependencies.command';
 import { EnableGlobalChatCommandsCommand } from 'src/database/commands/upgrade-version-command/2-52/2-52-workspace-command-1793006385503-enable-global-chat-commands.command';
 import { RemoveMessageCampaignFlagCommand } from 'src/database/commands/upgrade-version-command/2-52/2-52-workspace-command-1793032613417-remove-message-campaign-flag.command';
+import { AddCampaignsNavigationFolderCommand } from 'src/database/commands/upgrade-version-command/2-52/2-52-workspace-command-1793032958214-add-campaigns-navigation-folder.command';
 import { ApplicationModule } from 'src/engine/core-modules/application/application.module';
 import { WorkspaceCacheModule } from 'src/engine/workspace-cache/workspace-cache.module';
 import { WorkspaceMigrationModule } from 'src/engine/workspace-manager/workspace-migration/workspace-migration.module';
@@ -23,6 +24,7 @@ import { WorkspaceMigrationModule } from 'src/engine/workspace-manager/workspace
     BackfillFilesRecordFormWidgetsCommand,
     EnableGlobalChatCommandsCommand,
     RemoveMessageCampaignFlagCommand,
+    AddCampaignsNavigationFolderCommand,
   ],
 })
 export class V2_52_UpgradeVersionCommandModule {}
