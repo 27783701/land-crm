@@ -15,7 +15,7 @@ export class AddToolsToMcpServerFastInstanceCommand
       'ALTER TABLE "core"."mcpServer" ADD "toolsSyncedAt" TIMESTAMP WITH TIME ZONE',
     );
     await queryRunner.query(
-      'ALTER TABLE "core"."mcpServer" ADD "toolsSyncError" text',
+      'ALTER TABLE "core"."mcpServer" ADD "toolsSyncError" character varying',
     );
   }
 

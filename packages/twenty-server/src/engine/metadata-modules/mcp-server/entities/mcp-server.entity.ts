@@ -16,6 +16,7 @@ import { WasIntroducedInUpgrade } from 'src/engine/core-modules/upgrade/decorato
 import { ConnectedAccountEntity } from 'src/engine/metadata-modules/connected-account/entities/connected-account.entity';
 import { type McpServerTool } from 'src/engine/metadata-modules/mcp-server/types/mcp-server-tool.type';
 import { SyncableEntity } from 'src/engine/workspace-manager/types/syncable-entity.interface';
+import { type JsonbProperty } from 'src/engine/workspace-manager/workspace-migration/universal-flat-entity/types/jsonb-property.type';
 
 @Entity({ name: 'mcpServer', schema: 'core' })
 @WasIntroducedInUpgrade({
@@ -58,7 +59,7 @@ export class McpServerEntity
     upgradeCommandName: ADD_TOOLS_TO_MCP_SERVER_UPGRADE_COMMAND_NAME,
   })
   @Column({ nullable: false, type: 'jsonb', default: [] })
-  tools: McpServerTool[];
+  tools: JsonbProperty<McpServerTool[]>;
 
   @WasIntroducedInUpgrade({
     upgradeCommandName: ADD_TOOLS_TO_MCP_SERVER_UPGRADE_COMMAND_NAME,
@@ -69,7 +70,7 @@ export class McpServerEntity
   @WasIntroducedInUpgrade({
     upgradeCommandName: ADD_TOOLS_TO_MCP_SERVER_UPGRADE_COMMAND_NAME,
   })
-  @Column({ nullable: true, type: 'text' })
+  @Column({ nullable: true, type: 'varchar' })
   toolsSyncError: string | null;
 
   @CreateDateColumn({ type: 'timestamptz' })

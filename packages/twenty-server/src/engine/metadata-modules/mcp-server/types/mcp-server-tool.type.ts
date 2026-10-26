@@ -1,14 +1,16 @@
-export type McpServerToolAnnotations = {
-  title?: string;
-  readOnlyHint?: boolean;
-  destructiveHint?: boolean;
-  idempotentHint?: boolean;
-  openWorldHint?: boolean;
-};
+import { type z } from 'zod';
 
-export type McpServerTool = {
-  name: string;
-  description: string | null;
-  inputSchema: Record<string, unknown>;
-  annotations: McpServerToolAnnotations | null;
-};
+import {
+  type mcpServerToolInputSchemaSchema,
+  type mcpServerToolSchema,
+} from 'src/engine/metadata-modules/mcp-server/types/mcp-server-tool.schema';
+
+export type McpServerTool = z.infer<typeof mcpServerToolSchema>;
+
+export type McpServerToolInputSchema = z.infer<
+  typeof mcpServerToolInputSchemaSchema
+>;
+
+export type McpServerToolAnnotations = NonNullable<
+  McpServerTool['annotations']
+>;

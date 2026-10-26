@@ -1,18 +1,22 @@
 import { Injectable, Logger } from '@nestjs/common';
 
 import { isDefined } from 'twenty-shared/utils';
-import { type QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 
 import { WorkspaceManyOrAllFlatEntityMapsCacheService } from 'src/engine/metadata-modules/flat-entity/services/workspace-many-or-all-flat-entity-maps-cache.service';
 import { type FlatMcpServer } from 'src/engine/metadata-modules/flat-mcp-server/types/flat-mcp-server.type';
 import { McpServerEntity } from 'src/engine/metadata-modules/mcp-server/entities/mcp-server.entity';
 import { McpServerClientService } from 'src/engine/metadata-modules/mcp-server/services/mcp-server-client.service';
 import { type McpServerTool } from 'src/engine/metadata-modules/mcp-server/types/mcp-server-tool.type';
+import { sanitizeMcpServerTool } from 'src/engine/metadata-modules/mcp-server/utils/sanitize-mcp-server-tool.util';
 import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
 import { WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
-import { sanitizeMcpServerTool } from 'src/engine/metadata-modules/mcp-server/utils/sanitize-mcp-server-tool.util';
 
 const SYNC_ERROR_MAX_LENGTH = 500;
+
+type McpServerToSync = Pick<
+  FlatMcpServer,
+  'id' | 'workspaceId' | 'url' | 'connectedAccountId'
+>;
 
 @Injectable()
 export class McpServerToolSyncService {
@@ -25,22 +29,17 @@ export class McpServerToolSyncService {
     private readonly mcpServerRepository: WorkspaceScopedRepository<McpServerEntity>,
   ) {}
 
-  // Never throws: a server that is down must not block saving its settings,
-  // the outcome is reported through toolsSyncError instead.
-  async syncTools(flatMcpServer: FlatMcpServer): Promise<void> {
-    const { id, workspaceId } = flatMcpServer;
+  // Never throws: an unreachable server must not block saving its settings, the reason lands in toolsSyncError.
+  async syncTools(mcpServer: McpServerToSync): Promise<void> {
+    const { id, workspaceId } = mcpServer;
 
     try {
-      const tools = await this.fetchSanitizedTools(flatMcpServer);
+      const tools = await this.fetchSanitizedTools(mcpServer);
 
       await this.mcpServerRepository.update(
         workspaceId,
         { id },
-        {
-          tools: tools as QueryDeepPartialEntity<McpServerEntity>['tools'],
-          toolsSyncedAt: new Date(),
-          toolsSyncError: null,
-        },
+        { tools, toolsSyncedAt: new Date(), toolsSyncError: null },
       );
     } catch (error) {
       const message =
@@ -63,13 +62,9 @@ export class McpServerToolSyncService {
   }
 
   private async fetchSanitizedTools(
-    flatMcpServer: FlatMcpServer,
+    mcpServer: McpServerToSync,
   ): Promise<McpServerTool[]> {
-    const remoteTools = await this.mcpServerClientService.listTools({
-      url: flatMcpServer.url,
-      connectedAccountId: flatMcpServer.connectedAccountId,
-      workspaceId: flatMcpServer.workspaceId,
-    });
+    const remoteTools = await this.mcpServerClientService.listTools(mcpServer);
 
     return remoteTools.map(sanitizeMcpServerTool).filter(isDefined);
   }

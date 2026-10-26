@@ -4,7 +4,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { buildAxiosFetch } from '@lifeomic/axios-fetch';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import { type CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import { type FetchLike } from '@modelcontextprotocol/sdk/shared/transport.js';
+import { type Tool } from '@modelcontextprotocol/sdk/types.js';
 import { isDefined } from 'twenty-shared/utils';
 import { Repository } from 'typeorm';
 
@@ -19,12 +20,13 @@ import {
 import { ConnectedAccountRefreshTokensService } from 'src/modules/connected-account/refresh-tokens-manager/services/connected-account-refresh-tokens.service';
 
 const MCP_CLIENT_INFO = { name: 'twenty', version: '1.0.0' };
-const LIST_TOOLS_TIMEOUT_MS = 10_000;
-const CALL_TOOL_TIMEOUT_MS = 30_000;
+const LIST_TOOLS_TIMEOUT_MS = 20_000;
+const LIST_TOOLS_MAX_PAGES = 10;
 
-type McpServerTarget = Pick<FlatMcpServer, 'url' | 'connectedAccountId'> & {
-  workspaceId: string;
-};
+type McpServerTarget = Pick<
+  FlatMcpServer,
+  'url' | 'connectedAccountId' | 'workspaceId'
+>;
 
 @Injectable()
 export class McpServerClientService {
@@ -36,48 +38,9 @@ export class McpServerClientService {
     private readonly connectedAccountRepository: Repository<ConnectedAccountEntity>,
   ) {}
 
-  async listTools(target: McpServerTarget): Promise<unknown[]> {
-    return this.withClient(target, async (client) => {
-      const tools: unknown[] = [];
-      let cursor: string | undefined;
-
-      do {
-        const page = await client.listTools(
-          { cursor },
-          { timeout: LIST_TOOLS_TIMEOUT_MS },
-        );
-
-        tools.push(...page.tools);
-        cursor = page.nextCursor;
-      } while (isDefined(cursor));
-
-      return tools;
-    });
-  }
-
-  async callTool({
-    toolName,
-    toolArguments,
-    ...target
-  }: McpServerTarget & {
-    toolName: string;
-    toolArguments: Record<string, unknown>;
-  }): Promise<CallToolResult> {
-    return this.withClient(
-      target,
-      async (client) =>
-        (await client.callTool(
-          { name: toolName, arguments: toolArguments },
-          undefined,
-          { timeout: CALL_TOOL_TIMEOUT_MS },
-        )) as CallToolResult,
-    );
-  }
-
-  private async withClient<TResult>(
-    target: McpServerTarget,
-    run: (client: Client) => Promise<TResult>,
-  ): Promise<TResult> {
+  // One deadline spans the handshake and every page: the sync runs inside a mutation.
+  async listTools(target: McpServerTarget): Promise<Tool[]> {
+    const signal = AbortSignal.timeout(LIST_TOOLS_TIMEOUT_MS);
     const accessToken = await this.resolveAccessToken(target);
     const client = new Client(MCP_CLIENT_INFO);
     const transport = new StreamableHTTPClientTransport(new URL(target.url), {
@@ -88,23 +51,58 @@ export class McpServerClientService {
     });
 
     try {
-      await client.connect(transport, { timeout: LIST_TOOLS_TIMEOUT_MS });
+      await client.connect(transport, { signal });
 
-      return await run(client);
+      return await this.listToolPages({ client, signal });
     } finally {
       await client.close().catch(() => undefined);
     }
   }
 
-  // The axios client enforces the SSRF allowlist and timeouts whatever the
-  // global fetch is; the SDK only needs a WHATWG-shaped response from it.
-  private buildFetch(workspaceId: string): typeof fetch {
-    return buildAxiosFetch(
+  private async listToolPages({
+    client,
+    signal,
+    cursor,
+    pageIndex = 0,
+  }: {
+    client: Client;
+    signal: AbortSignal;
+    cursor?: string;
+    pageIndex?: number;
+  }): Promise<Tool[]> {
+    if (pageIndex >= LIST_TOOLS_MAX_PAGES) {
+      throw new McpServerException(
+        `MCP server returned more than ${LIST_TOOLS_MAX_PAGES} pages of tools`,
+        McpServerExceptionCode.MCP_SERVER_TOOL_LIST_TOO_LARGE,
+      );
+    }
+
+    const page = await client.listTools({ cursor }, { signal });
+
+    if (!isDefined(page.nextCursor)) {
+      return page.tools;
+    }
+
+    const nextPages = await this.listToolPages({
+      client,
+      signal,
+      cursor: page.nextCursor,
+      pageIndex: pageIndex + 1,
+    });
+
+    return [...page.tools, ...nextPages];
+  }
+
+  // The SDK reads SSE from a WHATWG Response, which the axios client yields whatever globalThis.fetch is.
+  private buildFetch(workspaceId: string): FetchLike {
+    const axiosFetch = buildAxiosFetch(
       this.secureHttpClientService.getHttpClient(
-        { timeout: CALL_TOOL_TIMEOUT_MS },
+        { timeout: LIST_TOOLS_TIMEOUT_MS },
         { workspaceId, source: 'mcp-server' },
       ),
-    ) as unknown as typeof fetch;
+    );
+
+    return (url, init) => axiosFetch(url.toString(), init);
   }
 
   private async resolveAccessToken({

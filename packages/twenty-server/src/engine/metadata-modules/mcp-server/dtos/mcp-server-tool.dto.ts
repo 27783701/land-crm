@@ -2,6 +2,11 @@ import { Field, ObjectType } from '@nestjs/graphql';
 
 import GraphQLJSON from 'graphql-type-json';
 
+import {
+  type McpServerToolAnnotations,
+  type McpServerToolInputSchema,
+} from 'src/engine/metadata-modules/mcp-server/types/mcp-server-tool.type';
+
 @ObjectType('McpServerTool')
 export class McpServerToolDTO {
   @Field()
@@ -11,8 +16,8 @@ export class McpServerToolDTO {
   description: string | null;
 
   @Field(() => GraphQLJSON)
-  inputSchema: Record<string, unknown>;
+  inputSchema: McpServerToolInputSchema;
 
   @Field(() => GraphQLJSON, { nullable: true })
-  annotations: Record<string, unknown> | null;
+  annotations: McpServerToolAnnotations | null;
 }

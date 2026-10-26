@@ -1,8 +1,9 @@
 import http from 'http';
-import { Readable } from 'stream';
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { isString } from '@sniptt/guards';
+import { isDefined } from 'twenty-shared/utils';
 import { z } from 'zod';
 
 export type FakeMcpServer = {
@@ -34,61 +35,41 @@ const createMcpServer = (): McpServer => {
   return mcpServer;
 };
 
-const readBody = (req: http.IncomingMessage): Promise<string> =>
-  new Promise((resolve) => {
-    let body = '';
-
-    req.on('data', (chunk) => {
-      body += chunk;
-    });
-    req.on('end', () => resolve(body));
-  });
-
-// Stateless MCP transports are single-use, so every request gets its own.
+// A stateless transport is single-use, so every request gets its own server and transport.
 const handleMcpRequest = async (
-  req: http.IncomingMessage,
-  res: http.ServerResponse,
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
 ): Promise<void> => {
-  const transport = new WebStandardStreamableHTTPServerTransport({
+  const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
   });
 
   await createMcpServer().connect(transport);
-
-  const body = await readBody(req);
-  const response = await transport.handleRequest(
-    new Request(`http://${req.headers.host}${req.url}`, {
-      method: req.method,
-      headers: req.headers as Record<string, string>,
-      body: body.length > 0 ? body : undefined,
-    }),
-  );
-
-  res.writeHead(response.status, Object.fromEntries(response.headers));
-
-  if (response.body === null) {
-    res.end();
-
-    return;
-  }
-
-  Readable.fromWeb(response.body as never).pipe(res);
+  await transport.handleRequest(request, response);
 };
 
-export const startFakeMcpServer = (port: number): Promise<FakeMcpServer> =>
-  new Promise((resolve) => {
+export const startFakeMcpServer = (): Promise<FakeMcpServer> =>
+  new Promise((resolve, reject) => {
     const receivedAuthorizationHeaders: (string | undefined)[] = [];
 
-    const server = http.createServer((req, res) => {
-      receivedAuthorizationHeaders.push(req.headers.authorization);
-      void handleMcpRequest(req, res).catch(() => {
-        res.writeHead(500).end();
+    const server = http.createServer((request, response) => {
+      receivedAuthorizationHeaders.push(request.headers.authorization);
+      handleMcpRequest(request, response).catch(() => {
+        response.writeHead(500).end();
       });
     });
 
-    server.listen(port, '127.0.0.1', () => {
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+
+      if (!isDefined(address) || isString(address)) {
+        reject(new Error('Fake MCP server did not bind to a TCP port'));
+
+        return;
+      }
+
       resolve({
-        url: `http://127.0.0.1:${port}/mcp`,
+        url: `http://127.0.0.1:${address.port}/mcp`,
         receivedAuthorizationHeaders,
         close: () =>
           new Promise((resolveClose) => {

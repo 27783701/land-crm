@@ -11,6 +11,7 @@ export enum McpServerExceptionCode {
   INVALID_MCP_SERVER_NAME = 'INVALID_MCP_SERVER_NAME',
   INVALID_MCP_SERVER_URL = 'INVALID_MCP_SERVER_URL',
   CONNECTED_ACCOUNT_NOT_FOUND = 'CONNECTED_ACCOUNT_NOT_FOUND',
+  MCP_SERVER_TOOL_LIST_TOO_LARGE = 'MCP_SERVER_TOOL_LIST_TOO_LARGE',
 }
 
 const getMcpServerExceptionUserFriendlyMessage = (
@@ -29,6 +30,8 @@ const getMcpServerExceptionUserFriendlyMessage = (
       return msg`Invalid MCP server URL. Please provide a valid HTTP or HTTPS URL.`;
     case McpServerExceptionCode.CONNECTED_ACCOUNT_NOT_FOUND:
       return msg`Connected account not found. Only workspace-shared accounts can be linked to an MCP server.`;
+    case McpServerExceptionCode.MCP_SERVER_TOOL_LIST_TOO_LARGE:
+      return msg`The MCP server exposes too many tools to be synced.`;
     default:
       assertUnreachable(code);
   }

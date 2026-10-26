@@ -40,6 +40,6 @@ import { RefreshTokensManagerModule } from 'src/modules/connected-account/refres
     McpServerResolver,
     McpServerConnectedAccountListener,
   ],
-  exports: [McpServerService, McpServerClientService],
+  exports: [McpServerService],
 })
 export class McpServerModule {}
