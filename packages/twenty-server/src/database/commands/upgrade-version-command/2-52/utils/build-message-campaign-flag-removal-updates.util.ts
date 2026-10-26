@@ -46,12 +46,39 @@ const FLAGGED_EXPRESSION_BY_UNIVERSAL_IDENTIFIER: Record<string, string> = {
   )]: `${MESSAGE_CAMPAIGN_FLAG} and targetObjectReadPermissions.messageList`,
 };
 
-const removeMessageCampaignFlag = (expression: string): string | null =>
-  expression === MESSAGE_CAMPAIGN_FLAG
-    ? null
-    : expression
-        .replace(` and ${MESSAGE_CAMPAIGN_FLAG}`, '')
-        .replace(`${MESSAGE_CAMPAIGN_FLAG} and `, '');
+const LEADING_MESSAGE_CAMPAIGN_FLAG = `${MESSAGE_CAMPAIGN_FLAG} and `;
+
+const TRAILING_MESSAGE_CAMPAIGN_FLAG = ` and ${MESSAGE_CAMPAIGN_FLAG}`;
+
+const getExpressionWithoutFlagOrUndefined = (
+  expression: string,
+): string | null | undefined => {
+  if (expression === MESSAGE_CAMPAIGN_FLAG) {
+    return null;
+  }
+
+  let remainingExpression: string | undefined;
+
+  if (expression.startsWith(LEADING_MESSAGE_CAMPAIGN_FLAG)) {
+    remainingExpression = expression.slice(
+      LEADING_MESSAGE_CAMPAIGN_FLAG.length,
+    );
+  } else if (expression.endsWith(TRAILING_MESSAGE_CAMPAIGN_FLAG)) {
+    remainingExpression = expression.slice(
+      0,
+      -TRAILING_MESSAGE_CAMPAIGN_FLAG.length,
+    );
+  }
+
+  if (
+    !isDefined(remainingExpression) ||
+    remainingExpression.includes(MESSAGE_CAMPAIGN_FLAG)
+  ) {
+    return undefined;
+  }
+
+  return remainingExpression;
+};
 
 export const buildMessageCampaignFlagRemovalUpdates = ({
   flatCommandMenuItemMaps,
@@ -79,24 +106,30 @@ export const buildMessageCampaignFlagRemovalUpdates = ({
         commandMenuItem.conditionalAvailabilityExpression;
 
       if (direction === 'up') {
-        if (
-          !isDefined(currentExpression) ||
-          !currentExpression.includes(MESSAGE_CAMPAIGN_FLAG)
-        ) {
+        if (!isDefined(currentExpression)) {
+          return [];
+        }
+
+        const expressionWithoutFlag =
+          getExpressionWithoutFlagOrUndefined(currentExpression);
+
+        if (expressionWithoutFlag === undefined) {
           return [];
         }
 
         return [
           {
             ...commandMenuItem,
-            conditionalAvailabilityExpression:
-              removeMessageCampaignFlag(currentExpression),
+            conditionalAvailabilityExpression: expressionWithoutFlag,
             updatedAt: now,
           },
         ];
       }
 
-      if (currentExpression !== removeMessageCampaignFlag(flaggedExpression)) {
+      if (
+        currentExpression !==
+        getExpressionWithoutFlagOrUndefined(flaggedExpression)
+      ) {
         return [];
       }
 

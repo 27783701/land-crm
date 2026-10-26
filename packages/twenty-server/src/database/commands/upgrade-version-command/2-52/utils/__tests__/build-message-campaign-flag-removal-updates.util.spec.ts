@@ -1,9 +1,14 @@
-import { TWENTY_STANDARD_APPLICATION_UNIVERSAL_IDENTIFIER } from 'twenty-shared/application';
+import {
+  getSystemNavigationCommandMenuItemUniversalIdentifier,
+  TWENTY_STANDARD_APPLICATION_UNIVERSAL_IDENTIFIER,
+} from 'twenty-shared/application';
+import { STANDARD_OBJECTS } from 'twenty-shared/metadata';
 import { CommandMenuItemAvailabilityType } from 'twenty-shared/types';
 
 import { buildMessageCampaignFlagRemovalUpdates } from 'src/database/commands/upgrade-version-command/2-52/utils/build-message-campaign-flag-removal-updates.util';
 import { EngineComponentKey } from 'src/engine/metadata-modules/command-menu-item/enums/engine-component-key.enum';
 import { type FlatCommandMenuItem } from 'src/engine/metadata-modules/flat-command-menu-item/types/flat-command-menu-item.type';
+import { buildNavigationConditionalAvailabilityExpression } from 'src/engine/metadata-modules/flat-command-menu-item/utils/build-object-navigation-universal-flat-command-menu-item.util';
 import { createEmptyFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/constant/create-empty-flat-entity-maps.constant';
 import { type FlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/flat-entity-maps.type';
 import { STANDARD_COMMAND_MENU_ITEMS } from 'src/engine/workspace-manager/twenty-standard-application/constants/standard-command-menu-item.constant';
@@ -110,6 +115,162 @@ describe('buildMessageCampaignFlagRemovalUpdates', () => {
         conditionalAvailabilityExpression,
       })),
     );
+  });
+
+  it('turns every flagged campaign item into its shipped expression and is a no-op on a second run', () => {
+    const flaggedExpressionByUniversalIdentifier: [
+      string,
+      string,
+      string | null,
+    ][] = [
+      [
+        STANDARD_COMMAND_MENU_ITEMS.composeCampaignPinned.universalIdentifier,
+        `pageType == "INDEX_PAGE" and ${FLAG}`,
+        STANDARD_COMMAND_MENU_ITEMS.composeCampaignPinned
+          .conditionalAvailabilityExpression,
+      ],
+      [
+        STANDARD_COMMAND_MENU_ITEMS.sendMessageCampaignTest.universalIdentifier,
+        FLAGGED_SEND_CAMPAIGN_EXPRESSION,
+        STANDARD_COMMAND_MENU_ITEMS.sendMessageCampaignTest
+          .conditionalAvailabilityExpression,
+      ],
+      [
+        STANDARD_COMMAND_MENU_ITEMS.cancelMessageCampaign.universalIdentifier,
+        `numberOfSelectedRecords == 1 and (everyEquals(selectedRecords, "status", "SCHEDULED") or everyEquals(selectedRecords, "status", "SENDING")) and noneDefined(selectedRecords, "deletedAt") and ${FLAG}`,
+        STANDARD_COMMAND_MENU_ITEMS.cancelMessageCampaign
+          .conditionalAvailabilityExpression,
+      ],
+      [
+        STANDARD_COMMAND_MENU_ITEMS.duplicateMessageCampaign
+          .universalIdentifier,
+        `numberOfSelectedRecords == 1 and noneDefined(selectedRecords, "deletedAt") and objectPermissions.canUpdateObjectRecords and ${FLAG}`,
+        STANDARD_COMMAND_MENU_ITEMS.duplicateMessageCampaign
+          .conditionalAvailabilityExpression,
+      ],
+      [
+        STANDARD_COMMAND_MENU_ITEMS.duplicateMessageList.universalIdentifier,
+        `${FLAG} and numberOfSelectedRecords == 1 and noneDefined(selectedRecords, "deletedAt") and objectPermissions.canUpdateObjectRecords`,
+        STANDARD_COMMAND_MENU_ITEMS.duplicateMessageList
+          .conditionalAvailabilityExpression,
+      ],
+      [
+        STANDARD_COMMAND_MENU_ITEMS.addViewToMessageList.universalIdentifier,
+        `${FLAG} and targetObjectWritePermissions.messageListMember and pageType == "INDEX_PAGE" and not hasAnySoftDeleteFilterOnView`,
+        STANDARD_COMMAND_MENU_ITEMS.addViewToMessageList
+          .conditionalAvailabilityExpression,
+      ],
+      ...(
+        [
+          [
+            STANDARD_OBJECTS.messageCampaign.universalIdentifier,
+            'messageCampaign',
+          ],
+          [STANDARD_OBJECTS.messageList.universalIdentifier, 'messageList'],
+        ] as const
+      ).map(
+        ([objectUniversalIdentifier, nameSingular]): [
+          string,
+          string,
+          string,
+        ] => [
+          getSystemNavigationCommandMenuItemUniversalIdentifier({
+            objectMetadataApplicationUniversalIdentifier:
+              TWENTY_STANDARD_APPLICATION_UNIVERSAL_IDENTIFIER,
+            objectUniversalIdentifier,
+          }),
+          `${FLAG} and targetObjectReadPermissions.${nameSingular}`,
+          buildNavigationConditionalAvailabilityExpression({
+            universalIdentifier: objectUniversalIdentifier,
+            nameSingular,
+          }),
+        ],
+      ),
+    ];
+
+    const updates = buildMessageCampaignFlagRemovalUpdates({
+      flatCommandMenuItemMaps: buildMaps(
+        flaggedExpressionByUniversalIdentifier.map(
+          ([universalIdentifier, conditionalAvailabilityExpression]) =>
+            buildCommandMenuItem({
+              universalIdentifier,
+              conditionalAvailabilityExpression,
+            }),
+        ),
+      ),
+      direction: 'up',
+      now: NOW,
+    });
+
+    expect(
+      updates.map(
+        ({ universalIdentifier, conditionalAvailabilityExpression }) => [
+          universalIdentifier,
+          conditionalAvailabilityExpression,
+        ],
+      ),
+    ).toEqual(
+      expect.arrayContaining(
+        flaggedExpressionByUniversalIdentifier.map(
+          ([universalIdentifier, , expectedExpression]) => [
+            universalIdentifier,
+            expectedExpression,
+          ],
+        ),
+      ),
+    );
+    expect(updates).toHaveLength(flaggedExpressionByUniversalIdentifier.length);
+
+    expect(
+      buildMessageCampaignFlagRemovalUpdates({
+        flatCommandMenuItemMaps: buildMaps(updates),
+        direction: 'up',
+        now: NOW,
+      }),
+    ).toEqual([]);
+  });
+
+  it('strips the flag from older stored variants without touching the rest of the expression', () => {
+    const olderDraftOnlyExpression =
+      'numberOfSelectedRecords == 1 and everyEquals(selectedRecords, "status", "DRAFT") and noneDefined(selectedRecords, "deletedAt")';
+
+    const updates = buildMessageCampaignFlagRemovalUpdates({
+      flatCommandMenuItemMaps: buildMaps([
+        buildCommandMenuItem({
+          universalIdentifier:
+            STANDARD_COMMAND_MENU_ITEMS.sendMessageCampaign.universalIdentifier,
+          conditionalAvailabilityExpression: `${olderDraftOnlyExpression} and ${FLAG}`,
+        }),
+      ]),
+      direction: 'up',
+      now: NOW,
+    });
+
+    expect(updates[0]?.conditionalAvailabilityExpression).toBe(
+      olderDraftOnlyExpression,
+    );
+  });
+
+  it('leaves an expression alone when the flag is not a leading or trailing condition', () => {
+    const updates = buildMessageCampaignFlagRemovalUpdates({
+      flatCommandMenuItemMaps: buildMaps([
+        buildCommandMenuItem({
+          universalIdentifier:
+            STANDARD_COMMAND_MENU_ITEMS.sendMessageCampaign.universalIdentifier,
+          conditionalAvailabilityExpression: `not ${FLAG} and numberOfSelectedRecords == 1`,
+        }),
+        buildCommandMenuItem({
+          universalIdentifier:
+            STANDARD_COMMAND_MENU_ITEMS.cancelMessageCampaign
+              .universalIdentifier,
+          conditionalAvailabilityExpression: `numberOfSelectedRecords == 1 or ${FLAG}`,
+        }),
+      ]),
+      direction: 'up',
+      now: NOW,
+    });
+
+    expect(updates).toEqual([]);
   });
 
   it('leaves items without the flag and items owned by another application untouched', () => {
