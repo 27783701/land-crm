@@ -1,0 +1,133 @@
+import { useState } from 'react';
+import { styled } from '@linaria/react';
+import { useLingui } from '@lingui/react/macro';
+import { isNonEmptyString } from '@sniptt/guards';
+import { type IframeMediaPermission } from 'twenty-shared/types';
+import {
+  isDefined,
+  normalizeIframeMediaPermissionOrigin,
+} from 'twenty-shared/utils';
+import { IconPlus } from 'twenty-ui/icon';
+import { Button, Switch } from 'twenty-ui/primitives/input';
+import { Text } from 'twenty-ui/primitives/typography';
+import { themeCssVariables } from 'twenty-ui/theme';
+
+import { SettingsTextInput } from '@/ui/input/components/SettingsTextInput';
+
+type SettingsSecurityIframeMediaPermissionFormProps = {
+  disabled: boolean;
+  permissions: IframeMediaPermission[];
+  onSave: (permission: IframeMediaPermission) => Promise<boolean>;
+};
+
+const StyledForm = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${themeCssVariables.spacing[3]};
+`;
+
+const StyledControls = styled.div`
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${themeCssVariables.spacing[4]};
+`;
+
+const StyledLabel = styled.label`
+  align-items: center;
+  display: flex;
+  gap: ${themeCssVariables.spacing[2]};
+`;
+
+export const SettingsSecurityIframeMediaPermissionForm = ({
+  disabled,
+  permissions,
+  onSave,
+}: SettingsSecurityIframeMediaPermissionFormProps) => {
+  const { t } = useLingui();
+  const [originInput, setOriginInput] = useState('');
+  const [microphone, setMicrophone] = useState(false);
+  const [camera, setCamera] = useState(false);
+  const [error, setError] = useState<string>();
+  const hasSelectedCapability = microphone || camera;
+
+  const handleAddOrigin = async () => {
+    if (disabled || !hasSelectedCapability) {
+      return;
+    }
+
+    const origin = normalizeIframeMediaPermissionOrigin(originInput.trim());
+
+    if (!isDefined(origin)) {
+      setError(
+        t`Enter an HTTPS origin without a path or wildcard, such as https://workspace.aircall.io.`,
+      );
+      return;
+    }
+
+    if (permissions.some((permission) => permission.origin === origin)) {
+      setError(
+        t`This origin is already configured. Use its switches to change access.`,
+      );
+      return;
+    }
+
+    if (await onSave({ origin, microphone, camera })) {
+      setOriginInput('');
+      setMicrophone(false);
+      setCamera(false);
+      setError(undefined);
+    }
+  };
+
+  return (
+    <StyledForm role="group" aria-label={t`Add embedded website`}>
+      <SettingsTextInput
+        instanceId="iframe-media-permission-origin"
+        label={t`Website origin`}
+        placeholder="https://workspace.aircall.io"
+        value={originInput}
+        disabled={disabled}
+        onChange={(value) => {
+          setOriginInput(value);
+          setError(undefined);
+        }}
+        onInputEnter={() => void handleAddOrigin()}
+        error={error}
+      />
+      <StyledControls>
+        <StyledLabel>
+          <Switch
+            checked={microphone}
+            disabled={disabled}
+            size="sm"
+            onCheckedChange={setMicrophone}
+          />
+          <Text render={<span />}>{t`Microphone`}</Text>
+        </StyledLabel>
+        <StyledLabel>
+          <Switch
+            checked={camera}
+            disabled={disabled}
+            size="sm"
+            onCheckedChange={setCamera}
+          />
+          <Text render={<span />}>{t`Camera`}</Text>
+        </StyledLabel>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={
+            disabled ||
+            !isNonEmptyString(originInput.trim()) ||
+            !hasSelectedCapability
+          }
+          startIcon={<IconPlus size={16} />}
+          onClick={() => void handleAddOrigin()}
+        >
+          {t`Add website`}
+        </Button>
+      </StyledControls>
+    </StyledForm>
+  );
+};

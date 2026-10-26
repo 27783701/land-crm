@@ -1,12 +1,15 @@
+import { ManagedIframe } from '@/media-access/components/ManagedIframe';
 import { useIsPageLayoutInEditMode } from '@/page-layout/hooks/useIsPageLayoutInEditMode';
 import { type PageLayoutWidget } from '@/page-layout/types/PageLayoutWidget';
 import { PageLayoutWidgetNoDataDisplay } from '@/page-layout/widgets/components/PageLayoutWidgetNoDataDisplay';
 import { WidgetSkeletonLoader } from '@/page-layout/widgets/components/WidgetSkeletonLoader';
+import { useQuery } from '@apollo/client/react';
 import { styled } from '@linaria/react';
 import { useState } from 'react';
 import { getSafeUrl, isDefined } from 'twenty-shared/utils';
 import { doNotTranslate } from 'twenty-shared/i18n';
 import { themeCssVariables } from 'twenty-ui/theme';
+import { GetWorkspaceIframeMediaPermissionsDocument } from '~/generated-metadata/graphql';
 
 const StyledContainer = styled.div<{ $isEditMode: boolean }>`
   background: ${themeCssVariables.background.primary};
@@ -21,7 +24,7 @@ const StyledContainer = styled.div<{ $isEditMode: boolean }>`
   width: 100%;
 `;
 
-const StyledIframe = styled.iframe<{ $isEditMode: boolean }>`
+const StyledIframe = styled(ManagedIframe)<{ $isEditMode: boolean }>`
   border: none;
   flex: 1;
   height: 100%;
@@ -52,12 +55,18 @@ const StyledErrorContainer = styled.div`
   text-align: center;
 `;
 
-export type IframeWidgetProps = {
+type IframeWidgetProps = {
   widget: PageLayoutWidget;
 };
 
 export const IframeWidget = ({ widget }: IframeWidgetProps) => {
   const isPageLayoutInEditMode = useIsPageLayoutInEditMode();
+  const { data, error: mediaPolicyError } = useQuery(
+    GetWorkspaceIframeMediaPermissionsDocument,
+    {
+      fetchPolicy: 'cache-and-network',
+    },
+  );
 
   const configuration = widget.configuration;
 
@@ -104,6 +113,14 @@ export const IframeWidget = ({ widget }: IframeWidgetProps) => {
       )}
       <StyledIframe
         $isEditMode={isPageLayoutInEditMode}
+        iframeId={widget.id}
+        owner={{ type: 'workspace-widget', id: widget.id, name: title }}
+        iframeMediaPermissions={
+          isDefined(mediaPolicyError)
+            ? []
+            : (data?.currentWorkspace.iframeMediaPermissions ?? [])
+        }
+        requestedMediaCapabilities={['microphone', 'camera']}
         src={safeUrl}
         title={title}
         onLoad={handleIframeLoad}

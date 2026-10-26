@@ -17,6 +17,7 @@ import {
   isAutoSelectModelId,
   isDefined,
   normalizeAllowedIframeOrigin,
+  normalizeIframeMediaPermissionOrigin,
 } from 'twenty-shared/utils';
 import { WorkspaceActivationStatus } from 'twenty-shared/workspace';
 import {
@@ -69,6 +70,7 @@ import { UserWorkspaceService } from 'src/engine/core-modules/user-workspace/use
 import { UserEntity } from 'src/engine/core-modules/user/user.entity';
 import { type UpdateWorkspaceInput } from 'src/engine/core-modules/workspace/dtos/update-workspace-input';
 import { type UpdateWorkspaceAllowedIframeOriginsInput } from 'src/engine/core-modules/workspace/dtos/update-workspace-allowed-iframe-origins.input';
+import { type UpdateWorkspaceIframeMediaPermissionsInput } from 'src/engine/core-modules/workspace/dtos/update-workspace-iframe-media-permissions.input';
 import { WORKSPACE_FIELDS_NOT_UPDATABLE_BY_APPLICATIONS } from 'src/engine/core-modules/workspace/constants/workspace-fields-not-updatable-by-applications.constant';
 import { WORKSPACE_FIELDS_UPDATABLE_BEFORE_ACTIVATION } from 'src/engine/core-modules/workspace/constants/workspace-fields-updatable-before-activation.constant';
 import {
@@ -322,6 +324,60 @@ export class WorkspaceService {
       'workspaceEntity',
       workspaceId,
     );
+    return updatedWorkspace;
+  }
+
+  async updateWorkspaceIframeMediaPermissions({
+    workspaceId,
+    input,
+  }: {
+    workspaceId: string;
+    input: UpdateWorkspaceIframeMediaPermissionsInput;
+  }): Promise<WorkspaceEntity> {
+    const origin = normalizeIframeMediaPermissionOrigin(input.origin);
+
+    assertIsDefinedOrThrow(origin);
+
+    const updatedWorkspace = await this.workspaceRepository.manager.transaction(
+      async (manager) => {
+        const repository = manager.getRepository(WorkspaceEntity);
+        const workspace = await repository.findOne({
+          where: { id: workspaceId },
+          lock: { mode: 'pessimistic_write' },
+        });
+
+        assertIsDefinedOrThrow(workspace, WorkspaceNotFoundDefaultError);
+
+        const iframeMediaPermissions = (
+          workspace.iframeMediaPermissions ?? []
+        ).filter((permission) => permission.origin !== origin);
+
+        if (input.microphone || input.camera) {
+          iframeMediaPermissions.push({
+            origin,
+            microphone: input.microphone,
+            camera: input.camera,
+          });
+        }
+
+        if (iframeMediaPermissions.length > MAX_ALLOWED_IFRAME_ORIGINS) {
+          throw new WorkspaceException(
+            'Too many iframe media origins',
+            WorkspaceExceptionCode.IFRAME_ORIGIN_LIMIT_EXCEEDED,
+          );
+        }
+
+        await repository.update(workspaceId, { iframeMediaPermissions });
+
+        return { ...workspace, iframeMediaPermissions };
+      },
+    );
+
+    await this.coreEntityCacheService.invalidate(
+      'workspaceEntity',
+      workspaceId,
+    );
+
     return updatedWorkspace;
   }
 

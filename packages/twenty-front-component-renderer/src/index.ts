@@ -1,4 +1,7 @@
 export { FrontComponentRenderer } from '@/host/components/FrontComponentRenderer';
+export { FrontComponentIframeHostContext } from '@/host/elements/contexts/FrontComponentIframeHostContext';
+export { type FrontComponentIframeHostProps } from '@/host/elements/types/FrontComponentIframeHostProps';
+export { getRequestedIframeMediaCapabilities } from '@/host/elements/utils/getRequestedIframeMediaCapabilities';
 export { FrontComponentInputFocusContext } from '@/host/caret/contexts/FrontComponentInputFocusContext';
 export { type SetEditableFocused } from '@/host/caret/types/SetEditableFocused';
 export { componentRegistry } from '@/host/generated/host-component-registry';

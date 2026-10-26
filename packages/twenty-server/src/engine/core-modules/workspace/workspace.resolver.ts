@@ -46,6 +46,7 @@ import {
   PublicWorkspaceDataSummaryDTO,
 } from 'src/engine/core-modules/workspace/dtos/public-workspace-data.dto';
 import { UpdateWorkspaceAllowedIframeOriginsInput } from 'src/engine/core-modules/workspace/dtos/update-workspace-allowed-iframe-origins.input';
+import { UpdateWorkspaceIframeMediaPermissionsInput } from 'src/engine/core-modules/workspace/dtos/update-workspace-iframe-media-permissions.input';
 import { UpdateWorkspaceInput } from 'src/engine/core-modules/workspace/dtos/update-workspace-input';
 import { WorkspaceUrlsDTO } from 'src/engine/core-modules/workspace/dtos/workspace-urls.dto';
 import { WorkspaceService } from 'src/engine/core-modules/workspace/services/workspace.service';
@@ -217,6 +218,35 @@ export class WorkspaceResolver {
         workspace.id,
         data,
       );
+    } catch (error) {
+      workspaceGraphqlApiExceptionHandler(error);
+    }
+  }
+
+  @Mutation(() => WorkspaceEntity)
+  @UseGuards(
+    AuthPrincipalGuard({
+      userSession: {
+        standard: true,
+        impersonated: true,
+        playground: true,
+        workspaceAgnostic: false,
+      },
+      apiKey: true,
+      oauthClient: true,
+      application: true,
+    }),
+    SettingsPermissionGuard(PermissionFlagType.SECURITY),
+  )
+  async updateWorkspaceIframeMediaPermissions(
+    @Args('data') input: UpdateWorkspaceIframeMediaPermissionsInput,
+    @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
+  ) {
+    try {
+      return await this.workspaceService.updateWorkspaceIframeMediaPermissions({
+        workspaceId,
+        input,
+      });
     } catch (error) {
       workspaceGraphqlApiExceptionHandler(error);
     }

@@ -1,14 +1,10 @@
-import { type FrontComponentMediaSessionStatus } from '@/front-components/media-session/types/FrontComponentMediaSessionStatus';
+import { type MediaAccessSession } from '@/media-access/types/MediaAccessSession';
 import { styled } from '@linaria/react';
 import { t } from '@lingui/core/macro';
-import { isDefined, isNonEmptyArray } from 'twenty-shared/utils';
+import { isDefined } from 'twenty-shared/utils';
 import { IconMicrophone, IconVideo } from 'twenty-ui/icon';
 import { Button } from 'twenty-ui/primitives/input';
 import { themeCssVariables, useTheme } from 'twenty-ui/theme';
-
-type FrontComponentMediaSessionTooltipRowProps = {
-  sessions: FrontComponentMediaSessionStatus[];
-};
 
 const StyledRow = styled.div`
   align-items: center;
@@ -24,7 +20,7 @@ const StyledDetails = styled.div`
   min-width: 0;
 `;
 
-const StyledApplicationName = styled.span`
+const StyledOwnerName = styled.span`
   font-weight: ${themeCssVariables.font.weight.medium};
   overflow-wrap: anywhere;
 `;
@@ -32,11 +28,14 @@ const StyledApplicationName = styled.span`
 const StyledMediaType = styled.span`
   color: ${themeCssVariables.font.color.secondary};
   font-size: ${themeCssVariables.font.size.xs};
+  overflow-wrap: anywhere;
 `;
 
-export const FrontComponentMediaSessionTooltipRow = ({
+export const MediaAccessSessionRow = ({
   sessions,
-}: FrontComponentMediaSessionTooltipRowProps) => {
+}: {
+  sessions: MediaAccessSession[];
+}) => {
   const theme = useTheme();
   const firstSession = sessions[0];
 
@@ -44,54 +43,60 @@ export const FrontComponentMediaSessionTooltipRow = ({
     return null;
   }
 
-  const activeMediaTypes = sessions.flatMap(
-    (session) => session.activeMediaTypes,
+  const isCapturing = sessions.some(
+    (session) => session.status === 'capturing',
   );
-  const isCapturing = isNonEmptyArray(activeMediaTypes);
-  const mediaTypes = isCapturing
-    ? activeMediaTypes
-    : sessions.flatMap((session) => session.pendingMediaTypes);
+  const isDelegated = firstSession.status === 'delegated';
+  const mediaTypes = sessions
+    .filter((session) => !isCapturing || session.status === 'capturing')
+    .flatMap((session) => session.mediaTypes);
   const usesAudio = mediaTypes.includes('audio');
   const usesVideo = mediaTypes.includes('video');
   const getMediaLabel = () => {
     if (usesAudio && usesVideo) {
-      return t`Microphone and camera`;
+      return isDelegated
+        ? t`Microphone and camera access enabled`
+        : t`Microphone and camera`;
     }
 
     if (usesVideo) {
-      return t`Camera`;
+      return isDelegated ? t`Camera access enabled` : t`Camera`;
     }
 
-    return t`Microphone`;
+    return isDelegated ? t`Microphone access enabled` : t`Microphone`;
   };
-  const { applicationName } = firstSession;
+  const { ownerName, origin } = firstSession;
   const MediaIcon = usesVideo ? IconVideo : IconMicrophone;
   const handleStop = () => {
     for (const session of sessions) {
       session.onStop();
     }
   };
+  const actionLabel = isDelegated
+    ? t`Disable media access for ${ownerName}`
+    : isCapturing
+      ? t`Stop capture for ${ownerName}`
+      : t`Cancel media request for ${ownerName}`;
 
   return (
     <StyledRow role="listitem">
       <MediaIcon size={theme.icon.size.md} aria-hidden />
       <StyledDetails>
-        <StyledApplicationName>{applicationName}</StyledApplicationName>
+        <StyledOwnerName>{ownerName}</StyledOwnerName>
         <StyledMediaType>
-          {isCapturing ? getMediaLabel() : t`Waiting for permission`}
+          {isCapturing || isDelegated
+            ? getMediaLabel()
+            : t`Waiting for permission`}
         </StyledMediaType>
+        {isDelegated && <StyledMediaType>{origin}</StyledMediaType>}
       </StyledDetails>
       <Button
         size="sm"
         variant="ghost"
-        aria-label={
-          isCapturing
-            ? t`Stop recording for ${applicationName}`
-            : t`Cancel recording for ${applicationName}`
-        }
+        aria-label={actionLabel}
         onClick={handleStop}
       >
-        {isCapturing ? t`Stop` : t`Cancel`}
+        {isDelegated ? t`Disable` : isCapturing ? t`Stop` : t`Cancel`}
       </Button>
     </StyledRow>
   );
