@@ -1,5 +1,6 @@
 import { Inject } from '@nestjs/common';
 import { Command } from 'nest-commander';
+import { STANDARD_OBJECTS } from 'twenty-shared/metadata';
 import { isDefined } from 'twenty-shared/utils';
 
 import { ProvisionedWorkspaceCommandRunner } from 'src/database/commands/command-runners/provisioned-workspace.command-runner';
@@ -52,10 +53,32 @@ export class AddCampaignsNavigationFolderCommand extends ProvisionedWorkspaceCom
       await this.applicationService.findWorkspaceTwentyStandardAndCustomApplicationOrThrow(
         { workspaceId },
       );
-    const { flatNavigationMenuItemMaps } =
+    const { flatNavigationMenuItemMaps, flatObjectMetadataMaps } =
       await this.workspaceCacheService.getOrRecompute(workspaceId, [
         'flatNavigationMenuItemMaps',
+        'flatObjectMetadataMaps',
       ]);
+
+    const isMissingCampaignObjects = [
+      STANDARD_OBJECTS.messageCampaign.universalIdentifier,
+      STANDARD_OBJECTS.messageList.universalIdentifier,
+    ].some(
+      (objectUniversalIdentifier) =>
+        !isDefined(
+          flatObjectMetadataMaps.byUniversalIdentifier[
+            objectUniversalIdentifier
+          ],
+        ),
+    );
+
+    if (isMissingCampaignObjects) {
+      this.logger.warn(
+        `Workspace ${workspaceId}: campaign or list object missing, skipping the Campaigns navigation folder`,
+      );
+
+      return;
+    }
+
     const { allFlatEntityMaps: standardAllFlatEntityMaps } =
       computeTwentyStandardApplicationAllFlatEntityMaps({
         now: new Date().toISOString(),
@@ -133,7 +156,7 @@ export class AddCampaignsNavigationFolderCommand extends ProvisionedWorkspaceCom
     }
 
     const result =
-      await this.workspaceMigrationValidateBuildAndRunService.validateBuildAndRunWorkspaceMigration(
+      await this.workspaceMigrationValidateBuildAndRunService.validateBuildAndRunLegacyWorkspaceMigration(
         {
           isSystemBuild: true,
           applicationUniversalIdentifier,
