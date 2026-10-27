@@ -28,6 +28,7 @@ export type FairTickets = { base: number; tickets: FairTicket[] };
 
 type FairPriorityTaggerOptions = {
   getClient: (queueName: MessageQueue) => Promise<RedisClient>;
+  getJobKey: (job: { queueName: MessageQueue; jobId: string }) => string;
   keyPrefix: string;
   rebaseGraceMs?: number;
 };
@@ -136,13 +137,9 @@ export class FairPriorityTagger {
             this.buildFairKey({ queueName, suffix: 'vtime' }),
             this.buildFairKey({ queueName, suffix: 'base' }),
             this.buildFairKey({ queueName, suffix: 'rebase' }),
+            this.options.getJobKey({ queueName, jobId }),
           ],
-          args: [
-            this.buildQueueKey({ queueName, suffix: jobId }),
-            FAIR_REBASE_THRESHOLD,
-            FAIR_REBASE_STEP,
-            FAIR_TICKET_OFFSET,
-          ],
+          args: [FAIR_REBASE_THRESHOLD, FAIR_REBASE_STEP, FAIR_TICKET_OFFSET],
         }),
       );
 
@@ -156,7 +153,11 @@ export class FairPriorityTagger {
         void this.rebase(queueName);
       }
     } catch (error) {
-      this.warn({ queueName, action: 'record the fair dispatch', error });
+      this.warn({
+        queueName,
+        action: `record the fair dispatch of job ${jobId}`,
+        error,
+      });
     }
   }
 

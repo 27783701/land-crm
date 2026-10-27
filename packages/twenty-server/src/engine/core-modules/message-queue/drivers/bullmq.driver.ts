@@ -426,12 +426,12 @@ export class BullMQDriver
     jobsData: unknown[];
     options?: Pick<QueueJobOptions, 'groupKeys' | 'urgent' | 'delay'>;
   }): Promise<(FairJobOptions | undefined)[]> {
-    const staticPriorities: (FairJobOptions | undefined)[] = jobsData.map(
+    const unrankedJobOptions: (FairJobOptions | undefined)[] = jobsData.map(
       () => undefined,
     );
 
     if (!this.isFairnessEnabled() || (options?.delay ?? 0) > 0) {
-      return staticPriorities;
+      return unrankedJobOptions;
     }
 
     const reservations: { groupKeys: string[]; jobIndexes: number[] }[] = [];
@@ -477,11 +477,11 @@ export class BullMQDriver
         shouldStoreInCache: false,
       });
 
-      return staticPriorities;
+      return unrankedJobOptions;
     }
 
     const { base, tickets } = fairTickets;
-    const fairJobOptions = [...staticPriorities];
+    const fairJobOptions = [...unrankedJobOptions];
 
     reservations.forEach(({ jobIndexes }, reservationIndex) => {
       const { tag, weight } = tickets[reservationIndex];

@@ -29,8 +29,6 @@ const ACTIVE_KEY = `${QUEUE_KEY_PREFIX}active`;
 const PRIORITY_SCORE_BASE = 2 ** 32;
 const BULLMQ_PRIORITY_SCORE_LUA =
   require.resolve('bullmq/dist/cjs/commands/includes/getPriorityScore.lua');
-const THRESHOLD = FAIR_REBASE_THRESHOLD;
-const STEP = FAIR_REBASE_STEP;
 
 const ticketOf = (tag: number) => FAIR_TICKET_OFFSET + tag;
 
@@ -200,10 +198,10 @@ describe('FairPriorityTagger', () => {
       const { redis, tagger, readClock } = await createTagger();
 
       await redis.set(VIRTUAL_TIME_KEY, 3);
-      await redis.set(BASE_KEY, STEP);
+      await redis.set(BASE_KEY, FAIR_REBASE_STEP);
       await redis.set(
         `${QUEUE_KEY_PREFIX}fair:clock:workspace:S`,
-        `0:${STEP + 8}`,
+        `0:${FAIR_REBASE_STEP + 8}`,
       );
 
       expect(
@@ -211,8 +209,8 @@ describe('FairPriorityTagger', () => {
           queueName: QUEUE,
           reservations: [{ groupKeys: ['workspace:S'], batchSize: 1 }],
         }),
-      ).toEqual({ base: STEP, tickets: [{ tag: 8, weight: 1 }] });
-      expect(await readClock('workspace:S')).toEqual([STEP, 9]);
+      ).toEqual({ base: FAIR_REBASE_STEP, tickets: [{ tag: 8, weight: 1 }] });
+      expect(await readClock('workspace:S')).toEqual([FAIR_REBASE_STEP, 9]);
     });
 
     it('reads a clock written before the base existed on the current base', async () => {
@@ -337,10 +335,10 @@ describe('FairPriorityTagger', () => {
       } = await createTagger();
       const fillerCount = 1200;
 
-      await redis.set(VIRTUAL_TIME_KEY, THRESHOLD - 1);
+      await redis.set(VIRTUAL_TIME_KEY, FAIR_REBASE_THRESHOLD - 1);
       await redis.set(
         `${QUEUE_KEY_PREFIX}fair:clock:workspace:A`,
-        `0:${THRESHOLD + 3}`,
+        `0:${FAIR_REBASE_THRESHOLD + 3}`,
       );
       await seedJob({
         jobId: 'urgent',
@@ -356,33 +354,33 @@ describe('FairPriorityTagger', () => {
       });
       await seedJob({
         jobId: 'A2',
-        priority: ticketOf(THRESHOLD + 1),
+        priority: ticketOf(FAIR_REBASE_THRESHOLD + 1),
         counter: 3,
         state: 'prioritized',
       });
       await seedJob({
         jobId: 'A3',
-        priority: ticketOf(THRESHOLD + 2),
+        priority: ticketOf(FAIR_REBASE_THRESHOLD + 2),
         counter: 4,
         state: 'prioritized',
       });
       for (let index = 0; index < fillerCount; index += 1) {
         await seedJob({
           jobId: `F${index}`,
-          priority: ticketOf(THRESHOLD + 10 + index),
+          priority: ticketOf(FAIR_REBASE_THRESHOLD + 10 + index),
           counter: 100 + index,
           state: 'prioritized',
         });
       }
       await seedJob({
         jobId: 'retrying',
-        priority: ticketOf(THRESHOLD + 5),
+        priority: ticketOf(FAIR_REBASE_THRESHOLD + 5),
         counter: 5,
         state: 'delayed',
       });
       await seedJob({
         jobId: 'running',
-        priority: ticketOf(THRESHOLD),
+        priority: ticketOf(FAIR_REBASE_THRESHOLD),
         counter: 6,
         state: 'active',
       });
@@ -390,8 +388,10 @@ describe('FairPriorityTagger', () => {
       await tagger.dispatched({ queueName: QUEUE, jobId: 'running' });
       await tagger.rebase(QUEUE);
 
-      expect(await readVirtualTime()).toBe(THRESHOLD - STEP);
-      expect(await readBase()).toBe(STEP);
+      expect(await readVirtualTime()).toBe(
+        FAIR_REBASE_THRESHOLD - FAIR_REBASE_STEP,
+      );
+      expect(await readBase()).toBe(FAIR_REBASE_STEP);
       expect(await isRebasing()).toBe(false);
       expect((await readPrioritizedWithScores()).slice(0, 8)).toEqual([
         'urgent',
@@ -399,33 +399,43 @@ describe('FairPriorityTagger', () => {
         'static',
         4 * PRIORITY_SCORE_BASE + 2,
         'A2',
-        ticketOf(THRESHOLD + 1 - STEP) * PRIORITY_SCORE_BASE + 3,
+        ticketOf(FAIR_REBASE_THRESHOLD + 1 - FAIR_REBASE_STEP) *
+          PRIORITY_SCORE_BASE +
+          3,
         'A3',
-        ticketOf(THRESHOLD + 2 - STEP) * PRIORITY_SCORE_BASE + 4,
+        ticketOf(FAIR_REBASE_THRESHOLD + 2 - FAIR_REBASE_STEP) *
+          PRIORITY_SCORE_BASE +
+          4,
       ]);
       expect(await redis.zcard(PRIORITIZED_KEY)).toBe(fillerCount + 4);
       expect(await readPriority(`F${fillerCount - 1}`)).toBe(
-        ticketOf(THRESHOLD + 10 + fillerCount - 1 - STEP),
+        ticketOf(
+          FAIR_REBASE_THRESHOLD + 10 + fillerCount - 1 - FAIR_REBASE_STEP,
+        ),
       );
-      expect(await readStampedBase('A2')).toBe(STEP);
+      expect(await readStampedBase('A2')).toBe(FAIR_REBASE_STEP);
       expect(await readPriority('static')).toBe(4);
       expect(await readStampedBase('static')).toBeUndefined();
       expect(await readPriority('retrying')).toBe(
-        ticketOf(THRESHOLD + 5 - STEP),
+        ticketOf(FAIR_REBASE_THRESHOLD + 5 - FAIR_REBASE_STEP),
       );
-      expect(await readPriority('running')).toBe(ticketOf(THRESHOLD - STEP));
+      expect(await readPriority('running')).toBe(
+        ticketOf(FAIR_REBASE_THRESHOLD - FAIR_REBASE_STEP),
+      );
       expect(
         await tagger.reserve({
           queueName: QUEUE,
           reservations: [{ groupKeys: ['workspace:A'], batchSize: 1 }],
         }),
       ).toEqual({
-        base: STEP,
-        tickets: [{ tag: THRESHOLD + 3 - STEP, weight: 1 }],
+        base: FAIR_REBASE_STEP,
+        tickets: [
+          { tag: FAIR_REBASE_THRESHOLD + 3 - FAIR_REBASE_STEP, weight: 1 },
+        ],
       });
       expect(await readClock('workspace:A')).toEqual([
-        STEP,
-        THRESHOLD + 4 - STEP,
+        FAIR_REBASE_STEP,
+        FAIR_REBASE_THRESHOLD + 4 - FAIR_REBASE_STEP,
       ]);
     });
 
@@ -433,18 +443,18 @@ describe('FairPriorityTagger', () => {
       const { redis, tagger, seedJob, readPrioritizedWithScores } =
         await createTagger();
 
-      await redis.set(VIRTUAL_TIME_KEY, THRESHOLD - 1);
+      await redis.set(VIRTUAL_TIME_KEY, FAIR_REBASE_THRESHOLD - 1);
       for (const depth of [1, 2, 3]) {
         await seedJob({
           jobId: `deep${depth}`,
-          priority: ticketOf(THRESHOLD + STEP + depth),
+          priority: ticketOf(FAIR_REBASE_THRESHOLD + FAIR_REBASE_STEP + depth),
           counter: depth,
           state: 'prioritized',
         });
       }
       await seedJob({
         jobId: 'running',
-        priority: ticketOf(THRESHOLD),
+        priority: ticketOf(FAIR_REBASE_THRESHOLD),
         counter: 9,
         state: 'active',
       });
@@ -454,11 +464,11 @@ describe('FairPriorityTagger', () => {
 
       expect(await readPrioritizedWithScores()).toEqual([
         'deep1',
-        ticketOf(THRESHOLD + 1) * PRIORITY_SCORE_BASE + 1,
+        ticketOf(FAIR_REBASE_THRESHOLD + 1) * PRIORITY_SCORE_BASE + 1,
         'deep2',
-        ticketOf(THRESHOLD + 2) * PRIORITY_SCORE_BASE + 2,
+        ticketOf(FAIR_REBASE_THRESHOLD + 2) * PRIORITY_SCORE_BASE + 2,
         'deep3',
-        ticketOf(THRESHOLD + 3) * PRIORITY_SCORE_BASE + 3,
+        ticketOf(FAIR_REBASE_THRESHOLD + 3) * PRIORITY_SCORE_BASE + 3,
       ]);
     });
 
@@ -466,10 +476,10 @@ describe('FairPriorityTagger', () => {
       const { redis, tagger, seedJob, readPriority, readStampedBase } =
         await createTagger();
 
-      await redis.set(VIRTUAL_TIME_KEY, THRESHOLD - 1);
+      await redis.set(VIRTUAL_TIME_KEY, FAIR_REBASE_THRESHOLD - 1);
       await seedJob({
         jobId: 'retrying',
-        priority: ticketOf(THRESHOLD - STEP + 100),
+        priority: ticketOf(FAIR_REBASE_THRESHOLD - FAIR_REBASE_STEP + 100),
         counter: 1,
         state: 'delayed',
       });
@@ -481,7 +491,7 @@ describe('FairPriorityTagger', () => {
       });
       await seedJob({
         jobId: 'running',
-        priority: ticketOf(THRESHOLD),
+        priority: ticketOf(FAIR_REBASE_THRESHOLD),
         counter: 3,
         state: 'active',
       });
@@ -490,7 +500,7 @@ describe('FairPriorityTagger', () => {
       await tagger.rebase(QUEUE);
 
       expect(await readPriority('retrying')).toBe(ticketOf(100));
-      expect(await readStampedBase('retrying')).toBe(STEP);
+      expect(await readStampedBase('retrying')).toBe(FAIR_REBASE_STEP);
       expect(await readPriority('overdue')).toBe(ticketOf(100));
       expect(await readStampedBase('overdue')).toBeUndefined();
     });
@@ -499,37 +509,37 @@ describe('FairPriorityTagger', () => {
       const { redis, tagger, seedJob, readPriority, readStampedBase } =
         await createTagger();
 
-      await redis.set(VIRTUAL_TIME_KEY, THRESHOLD - 1);
+      await redis.set(VIRTUAL_TIME_KEY, FAIR_REBASE_THRESHOLD - 1);
       await seedJob({
         jobId: 'fresh',
-        priority: ticketOf(THRESHOLD - STEP + 5),
+        priority: ticketOf(FAIR_REBASE_THRESHOLD - FAIR_REBASE_STEP + 5),
         counter: 1,
         state: 'prioritized',
-        base: STEP,
+        base: FAIR_REBASE_STEP,
       });
       await seedJob({
         jobId: 'stamped',
-        priority: ticketOf(THRESHOLD - STEP + 6),
+        priority: ticketOf(FAIR_REBASE_THRESHOLD - FAIR_REBASE_STEP + 6),
         counter: 2,
         state: 'prioritized',
-        stampedBase: STEP,
+        stampedBase: FAIR_REBASE_STEP,
       });
       await seedJob({
         jobId: 'legacy',
-        priority: ticketOf(THRESHOLD + 2),
+        priority: ticketOf(FAIR_REBASE_THRESHOLD + 2),
         counter: 3,
         state: 'prioritized',
         base: 'none',
       });
       await seedJob({
         jobId: 'old',
-        priority: ticketOf(THRESHOLD + 3),
+        priority: ticketOf(FAIR_REBASE_THRESHOLD + 3),
         counter: 4,
         state: 'prioritized',
       });
       await seedJob({
         jobId: 'running',
-        priority: ticketOf(THRESHOLD),
+        priority: ticketOf(FAIR_REBASE_THRESHOLD),
         counter: 5,
         state: 'active',
       });
@@ -537,12 +547,18 @@ describe('FairPriorityTagger', () => {
       await tagger.dispatched({ queueName: QUEUE, jobId: 'running' });
       await tagger.rebase(QUEUE);
 
-      expect(await readPriority('old')).toBe(ticketOf(THRESHOLD + 3 - STEP));
-      expect(await readPriority('fresh')).toBe(ticketOf(THRESHOLD - STEP + 5));
-      expect(await readPriority('stamped')).toBe(
-        ticketOf(THRESHOLD - STEP + 6),
+      expect(await readPriority('old')).toBe(
+        ticketOf(FAIR_REBASE_THRESHOLD + 3 - FAIR_REBASE_STEP),
       );
-      expect(await readPriority('legacy')).toBe(ticketOf(THRESHOLD + 2));
+      expect(await readPriority('fresh')).toBe(
+        ticketOf(FAIR_REBASE_THRESHOLD - FAIR_REBASE_STEP + 5),
+      );
+      expect(await readPriority('stamped')).toBe(
+        ticketOf(FAIR_REBASE_THRESHOLD - FAIR_REBASE_STEP + 6),
+      );
+      expect(await readPriority('legacy')).toBe(
+        ticketOf(FAIR_REBASE_THRESHOLD + 2),
+      );
       expect(await readStampedBase('legacy')).toBeUndefined();
     });
 
@@ -557,16 +573,16 @@ describe('FairPriorityTagger', () => {
         isRebasing,
       } = await createTagger();
 
-      await redis.set(VIRTUAL_TIME_KEY, THRESHOLD - 1);
+      await redis.set(VIRTUAL_TIME_KEY, FAIR_REBASE_THRESHOLD - 1);
       await seedJob({
         jobId: 'j1',
-        priority: ticketOf(THRESHOLD),
+        priority: ticketOf(FAIR_REBASE_THRESHOLD),
         counter: 1,
         state: 'active',
       });
       await seedJob({
         jobId: 'j2',
-        priority: ticketOf(THRESHOLD + 3),
+        priority: ticketOf(FAIR_REBASE_THRESHOLD + 3),
         counter: 2,
         state: 'active',
       });
@@ -575,9 +591,13 @@ describe('FairPriorityTagger', () => {
       await tagger.rebase(QUEUE);
       await tagger.dispatched({ queueName: QUEUE, jobId: 'j2' });
 
-      expect(await readBase()).toBe(STEP);
-      expect(await readVirtualTime()).toBe(THRESHOLD + 3 - STEP);
-      expect(await readPriority('j2')).toBe(ticketOf(THRESHOLD + 3 - STEP));
+      expect(await readBase()).toBe(FAIR_REBASE_STEP);
+      expect(await readVirtualTime()).toBe(
+        FAIR_REBASE_THRESHOLD + 3 - FAIR_REBASE_STEP,
+      );
+      expect(await readPriority('j2')).toBe(
+        ticketOf(FAIR_REBASE_THRESHOLD + 3 - FAIR_REBASE_STEP),
+      );
       expect(await isRebasing()).toBe(false);
     });
 
@@ -592,10 +612,10 @@ describe('FairPriorityTagger', () => {
         isRebasing,
       } = await createTagger({ rebaseGraceMs: 50 });
 
-      await redis.set(VIRTUAL_TIME_KEY, THRESHOLD - 1);
+      await redis.set(VIRTUAL_TIME_KEY, FAIR_REBASE_THRESHOLD - 1);
       await seedJob({
         jobId: 'x',
-        priority: ticketOf(THRESHOLD),
+        priority: ticketOf(FAIR_REBASE_THRESHOLD),
         counter: 1,
         state: 'active',
       });
@@ -607,23 +627,27 @@ describe('FairPriorityTagger', () => {
 
       expect(reservation).toEqual({
         base: 0,
-        tickets: [{ tag: THRESHOLD - 1, weight: 1 }],
+        tickets: [{ tag: FAIR_REBASE_THRESHOLD - 1, weight: 1 }],
       });
 
       await tagger.dispatched({ queueName: QUEUE, jobId: 'x' });
       await seedJob({
         jobId: 'late',
-        priority: ticketOf(THRESHOLD - 1),
+        priority: ticketOf(FAIR_REBASE_THRESHOLD - 1),
         counter: 9,
         state: 'prioritized',
       });
       await tagger.rebase(QUEUE);
 
-      expect(await readPriority('late')).toBe(ticketOf(THRESHOLD - 1 - STEP));
-      expect(await readStampedBase('late')).toBe(STEP);
+      expect(await readPriority('late')).toBe(
+        ticketOf(FAIR_REBASE_THRESHOLD - 1 - FAIR_REBASE_STEP),
+      );
+      expect(await readStampedBase('late')).toBe(FAIR_REBASE_STEP);
       expect(await readPrioritizedWithScores()).toEqual([
         'late',
-        ticketOf(THRESHOLD - 1 - STEP) * PRIORITY_SCORE_BASE + 9,
+        ticketOf(FAIR_REBASE_THRESHOLD - 1 - FAIR_REBASE_STEP) *
+          PRIORITY_SCORE_BASE +
+          9,
       ]);
       expect(await isRebasing()).toBe(false);
     });
@@ -640,21 +664,28 @@ describe('FairPriorityTagger', () => {
         isRebasing,
       } = await createTagger();
 
-      await redis.set(VIRTUAL_TIME_KEY, THRESHOLD - STEP);
-      await redis.set(BASE_KEY, STEP);
+      await redis.set(
+        VIRTUAL_TIME_KEY,
+        FAIR_REBASE_THRESHOLD - FAIR_REBASE_STEP,
+      );
+      await redis.set(BASE_KEY, FAIR_REBASE_STEP);
       await seedJob({
         jobId: 'stray',
-        priority: ticketOf(THRESHOLD + 5),
+        priority: ticketOf(FAIR_REBASE_THRESHOLD + 5),
         counter: 1,
         state: 'active',
       });
 
       await tagger.dispatched({ queueName: QUEUE, jobId: 'stray' });
 
-      expect(await readPriority('stray')).toBe(ticketOf(THRESHOLD + 5 - STEP));
-      expect(await readStampedBase('stray')).toBe(STEP);
-      expect(await readVirtualTime()).toBe(THRESHOLD + 5 - STEP);
-      expect(await readBase()).toBe(STEP);
+      expect(await readPriority('stray')).toBe(
+        ticketOf(FAIR_REBASE_THRESHOLD + 5 - FAIR_REBASE_STEP),
+      );
+      expect(await readStampedBase('stray')).toBe(FAIR_REBASE_STEP);
+      expect(await readVirtualTime()).toBe(
+        FAIR_REBASE_THRESHOLD + 5 - FAIR_REBASE_STEP,
+      );
+      expect(await readBase()).toBe(FAIR_REBASE_STEP);
       expect(await isRebasing()).toBe(false);
     });
 

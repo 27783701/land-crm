@@ -1,12 +1,12 @@
-// KEYS: virtual time, rebase base, rebase state. ARGV: job key, rebase threshold, rebase step, ticket offset. Returns 0, 1 when this dispatch started a rebase, 2 while one is in progress
+// KEYS: virtual time, rebase base, rebase state, job hash. ARGV: rebase threshold, rebase step, ticket offset. Returns 0, 1 when this dispatch started a rebase, 2 while one is in progress
 export const FAIR_DISPATCH_SCRIPT = `
 local virtualTime = tonumber(redis.call('GET', KEYS[1]) or '0')
 local base = tonumber(redis.call('GET', KEYS[2]) or '0')
 local isRebasing = redis.call('EXISTS', KEYS[3]) == 1
-local threshold = tonumber(ARGV[2])
-local step = tonumber(ARGV[3])
-local ticketOffset = tonumber(ARGV[4])
-local job = redis.call('HMGET', ARGV[1], 'priority', 'fairBase', 'opts')
+local threshold = tonumber(ARGV[1])
+local step = tonumber(ARGV[2])
+local ticketOffset = tonumber(ARGV[3])
+local job = redis.call('HMGET', KEYS[4], 'priority', 'fairBase', 'opts')
 local priority = tonumber(job[1])
 
 if priority == nil or priority < ticketOffset then
@@ -21,7 +21,7 @@ local ticket = priority - ticketOffset
 
 if shift > 0 and ticket >= shift then
   ticket = ticket - shift
-  redis.call('HSET', ARGV[1], 'priority', ticket + ticketOffset, 'fairBase', base)
+  redis.call('HSET', KEYS[4], 'priority', ticket + ticketOffset, 'fairBase', base)
 end
 
 if ticket > virtualTime then
