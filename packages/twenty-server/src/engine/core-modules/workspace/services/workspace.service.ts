@@ -10,6 +10,7 @@ import { msg } from '@lingui/core/macro';
 import chunk from 'lodash.chunk';
 import { setTimeout } from 'node:timers/promises';
 import { isAiModelTier, type AiModelTier } from 'twenty-shared/ai';
+import { type IframeMediaPermission } from 'twenty-shared/types';
 import {
   MAX_ALLOWED_IFRAME_ORIGINS,
   PermissionFlagType,
@@ -59,7 +60,6 @@ import {
   FileWorkspaceFolderDeletionJob,
   type FileWorkspaceFolderDeletionJobData,
 } from 'src/engine/core-modules/file/jobs/file-workspace-folder-deletion.job';
-import { UserInputError } from 'src/engine/core-modules/graphql/utils/graphql-errors.util';
 import { LOGIC_FUNCTION_DRIVER_FACTORY_TOKEN } from 'src/engine/core-modules/logic-function/logic-function-drivers/constants/logic-function-driver-factory.token';
 import { type LogicFunctionDriverFactory } from 'src/engine/core-modules/logic-function/logic-function-drivers/logic-function-driver.factory';
 import { LOGIC_FUNCTION_QUEUE_RETRY_BACKOFF } from 'src/engine/core-modules/logic-function/logic-function-trigger/constants/logic-function-queue-retry-backoff.constant';
@@ -75,7 +75,6 @@ import { UserWorkspaceService } from 'src/engine/core-modules/user-workspace/use
 import { UserEntity } from 'src/engine/core-modules/user/user.entity';
 import { type UpdateWorkspaceInput } from 'src/engine/core-modules/workspace/dtos/update-workspace-input';
 import { type UpdateWorkspaceAllowedIframeOriginsInput } from 'src/engine/core-modules/workspace/dtos/update-workspace-allowed-iframe-origins.input';
-import { type UpdateWorkspaceIframeMediaPermissionsInput } from 'src/engine/core-modules/workspace/dtos/update-workspace-iframe-media-permissions.input';
 import { WORKSPACE_FIELDS_NOT_UPDATABLE_BY_APPLICATIONS } from 'src/engine/core-modules/workspace/constants/workspace-fields-not-updatable-by-applications.constant';
 import { WORKSPACE_FIELDS_UPDATABLE_BEFORE_ACTIVATION } from 'src/engine/core-modules/workspace/constants/workspace-fields-updatable-before-activation.constant';
 import {
@@ -340,14 +339,15 @@ export class WorkspaceService {
     input,
   }: {
     workspaceId: string;
-    input: UpdateWorkspaceIframeMediaPermissionsInput;
+    input: IframeMediaPermission;
   }): Promise<WorkspaceEntity> {
     const origin = normalizeIframeMediaPermissionOrigin(input.origin);
 
     if (!isDefined(origin)) {
-      throw new UserInputError('Invalid iframe media permission origin', {
-        userFriendlyMessage: msg`Enter an HTTPS origin without a path or wildcard`,
-      });
+      throw new WorkspaceException(
+        'Invalid iframe media permission origin',
+        WorkspaceExceptionCode.IFRAME_MEDIA_PERMISSION_ORIGIN_NOT_VALID,
+      );
     }
 
     const updatedWorkspace = await this.workspaceRepository.manager.transaction(
