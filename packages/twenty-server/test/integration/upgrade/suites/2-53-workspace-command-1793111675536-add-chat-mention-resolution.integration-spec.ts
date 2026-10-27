@@ -5,7 +5,7 @@ import { isDefined } from 'twenty-shared/utils';
 
 import { getAppProviderByClassName } from 'test/integration/utils/get-app-provider-by-class-name.util';
 
-import { type AddChatMentionResolutionCommand } from 'src/database/commands/upgrade-version-command/2-52/2-52-workspace-command-1793023802653-add-chat-mention-resolution.command';
+import { type AddChatMentionResolutionCommand } from 'src/database/commands/upgrade-version-command/2-53/2-53-workspace-command-1793111675536-add-chat-mention-resolution.command';
 import { type AgentChatSharingService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-sharing.service';
 import { AiExceptionCode } from 'src/engine/metadata-modules/ai/ai.exception';
 import { type WorkspaceCacheService } from 'src/engine/workspace-cache/services/workspace-cache.service';
@@ -27,7 +27,7 @@ const RESOLVED_MENTION_FIELD_UNIVERSAL_IDENTIFIER =
   STANDARD_OBJECTS.agentChatThreadParticipant.fields.lastResolvedMentionAt
     .universalIdentifier;
 
-describe('2-52 workspace command - add chat mention resolution (integration)', () => {
+describe('2-53 workspace command - add chat mention resolution (integration)', () => {
   let command: AddChatMentionResolutionCommand;
   let workspaceCacheService: WorkspaceCacheService;
   let sharingService: AgentChatSharingService;

@@ -24,9 +24,9 @@ const RESOLVED_MENTION_FIELD_UNIVERSAL_IDENTIFIER =
     .universalIdentifier;
 const PARTICIPANT_BATCH_SIZE = 1000;
 
-@RegisteredWorkspaceCommand('2.52.0', 1793023802653)
+@RegisteredWorkspaceCommand('2.53.0', 1793111675536)
 @Command({
-  name: 'upgrade:2-52:add-chat-mention-resolution',
+  name: 'upgrade:2-53:add-chat-mention-resolution',
   description:
     'Track resolved chat mentions, recover proven historical replies and end due snoozes',
 })

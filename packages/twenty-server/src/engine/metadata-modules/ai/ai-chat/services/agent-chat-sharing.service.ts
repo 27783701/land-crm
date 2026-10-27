@@ -71,7 +71,7 @@ export class AgentChatSharingService {
     return hasAgentChatThreadChannelField({ flatFieldMetadataMaps });
   }
 
-  // TODO(@bosiraphael): remove once 2.52 leaves the cross-upgrade window
+  // TODO(@bosiraphael): remove once 2.53 leaves the cross-upgrade window
   async assertHasMentionResolutionOrThrow(workspaceId: string): Promise<void> {
     const { flatFieldMetadataMaps } =
       await this.workspaceCacheService.getOrRecompute(workspaceId, [
