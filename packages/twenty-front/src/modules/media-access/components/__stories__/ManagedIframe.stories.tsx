@@ -6,6 +6,7 @@ import { type Meta, type StoryObj } from '@storybook/react-vite';
 import { createStore, Provider } from 'jotai';
 import { type CSSProperties, useState } from 'react';
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test';
+import { isDefined } from 'twenty-shared/utils';
 import { Button } from 'twenty-ui/primitives/input';
 import { ComponentDecorator } from 'twenty-ui/testing';
 
@@ -23,12 +24,16 @@ const MICROPHONE_PERMISSION = {
   camera: false,
 };
 
+const CLASS_SIZED_IFRAME_CLASS_NAME = 'managed-iframe-story-class-sized';
+
 const ManagedIframePreview = ({
   hasNativeCapture = false,
   iframeStyle,
+  iframeClassName,
 }: {
   hasNativeCapture?: boolean;
   iframeStyle?: CSSProperties;
+  iframeClassName?: string;
 }) => {
   const [isHidden, setIsHidden] = useState(false);
   const [isGranted, setIsGranted] = useState(true);
@@ -53,6 +58,7 @@ const ManagedIframePreview = ({
 
   return (
     <Provider store={store}>
+      <style>{`.${CLASS_SIZED_IFRAME_CLASS_NAME} { border: 0; height: 180px; width: 376px; }`}</style>
       <MediaAccessIndicator />
       <Button onClick={() => setIsHidden(!isHidden)}>
         {isHidden ? 'Show phone' : 'Hide phone'}
@@ -68,8 +74,9 @@ const ManagedIframePreview = ({
           requestedMediaCapabilities={['microphone', 'camera']}
           src="https://example.com"
           title="Aircall phone"
-          width="100%"
-          height="100%"
+          className={iframeClassName}
+          width={isDefined(iframeClassName) ? undefined : '100%'}
+          height={isDefined(iframeClassName) ? undefined : '100%'}
           hidden={isHidden}
           style={iframeStyle}
           sandbox="allow-scripts allow-forms"
@@ -88,11 +95,12 @@ export const EnableAndDisable: StoryObj<typeof ManagedIframe> = {
 
     await expect(initialFrame).toHaveAttribute(
       'allow',
-      "encrypted-media; microphone 'none'; camera 'none'",
+      "microphone 'none'; camera 'none'; encrypted-media",
     );
     await expect(
       canvas.queryByRole('button', { name: 'Media access enabled' }),
     ).not.toBeInTheDocument();
+    await canvas.findByRole('button', { name: 'Enable microphone' });
     await userEvent.click(canvas.getByRole('button', { name: 'Hide phone' }));
     await expect(initialFrame).not.toBeVisible();
     await expect(
@@ -100,14 +108,14 @@ export const EnableAndDisable: StoryObj<typeof ManagedIframe> = {
     ).not.toBeInTheDocument();
     await userEvent.click(canvas.getByRole('button', { name: 'Show phone' }));
     await userEvent.click(
-      canvas.getByRole('button', { name: 'Enable microphone' }),
+      await canvas.findByRole('button', { name: 'Enable microphone' }),
     );
 
     const enabledFrame = canvas.getByTitle('Aircall phone');
     await expect(enabledFrame).not.toBe(initialFrame);
     await expect(enabledFrame).toHaveAttribute(
       'allow',
-      "encrypted-media; microphone https://example.com; camera 'none'",
+      "microphone https://example.com; camera 'none'; encrypted-media",
     );
     await userEvent.click(canvas.getByRole('button', { name: 'Hide phone' }));
     await expect(enabledFrame).not.toBeVisible();
@@ -129,11 +137,11 @@ export const EnableAndDisable: StoryObj<typeof ManagedIframe> = {
     ).not.toBeInTheDocument();
     await userEvent.click(canvas.getByRole('button', { name: 'Show phone' }));
     await expect(
-      canvas.getByRole('button', { name: 'Enable microphone' }),
+      await canvas.findByRole('button', { name: 'Enable microphone' }),
     ).toBeVisible();
     await expect(canvas.getByTitle('Aircall phone')).toHaveAttribute(
       'allow',
-      "encrypted-media; microphone 'none'; camera 'none'",
+      "microphone 'none'; camera 'none'; encrypted-media",
     );
   },
 };
@@ -143,7 +151,7 @@ export const RevokedPermission: StoryObj<typeof ManagedIframe> = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      canvas.getByRole('button', { name: 'Enable microphone' }),
+      await canvas.findByRole('button', { name: 'Enable microphone' }),
     );
     const enabledFrame = canvas.getByTitle('Aircall phone');
     await userEvent.click(
@@ -161,11 +169,14 @@ export const RevokedPermission: StoryObj<typeof ManagedIframe> = {
       canvas.getByRole('button', { name: 'Grant microphone' }),
     );
     await expect(
-      canvas.getByRole('button', { name: 'Enable microphone' }),
+      await canvas.findByRole('button', { name: 'Enable microphone' }),
     ).toBeVisible();
+    await expect(
+      canvas.queryByRole('button', { name: 'Media access enabled' }),
+    ).not.toBeInTheDocument();
     await expect(canvas.getByTitle('Aircall phone')).toHaveAttribute(
       'allow',
-      "encrypted-media; microphone 'none'; camera 'none'",
+      "microphone 'none'; camera 'none'; encrypted-media",
     );
   },
 };
@@ -175,7 +186,7 @@ export const NativeCaptureAndExternalAccess: StoryObj<typeof ManagedIframe> = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      canvas.getByRole('button', { name: 'Enable microphone' }),
+      await canvas.findByRole('button', { name: 'Enable microphone' }),
     );
     await userEvent.click(
       canvas.getByRole('button', { name: 'Microphone or camera in use' }),
@@ -220,17 +231,35 @@ export const FixedSize: StoryObj<typeof ManagedIframe> = {
     await expect(initialFrame.getBoundingClientRect().height).toBe(180);
     await expect(
       initialFrame.parentElement?.getBoundingClientRect().width,
-    ).toBe(360);
-    await expect(
-      initialFrame.parentElement?.getBoundingClientRect().height,
-    ).toBe(180);
+    ).toBe(500);
     await userEvent.click(
-      canvas.getByRole('button', { name: 'Enable microphone' }),
+      await canvas.findByRole('button', { name: 'Enable microphone' }),
     );
 
     const enabledFrame = canvas.getByTitle('Aircall phone');
     await expect(enabledFrame).not.toBe(initialFrame);
     await expect(enabledFrame.getBoundingClientRect().width).toBe(360);
+    await expect(enabledFrame.getBoundingClientRect().height).toBe(180);
+  },
+};
+
+export const ClassSized: StoryObj<typeof ManagedIframe> = {
+  render: () => (
+    <ManagedIframePreview iframeClassName={CLASS_SIZED_IFRAME_CLASS_NAME} />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const initialFrame = canvas.getByTitle('Aircall phone');
+
+    await expect(initialFrame.getBoundingClientRect().width).toBe(376);
+    await expect(initialFrame.getBoundingClientRect().height).toBe(180);
+    await userEvent.click(
+      await canvas.findByRole('button', { name: 'Enable microphone' }),
+    );
+
+    const enabledFrame = canvas.getByTitle('Aircall phone');
+    await expect(enabledFrame).not.toBe(initialFrame);
+    await expect(enabledFrame.getBoundingClientRect().width).toBe(376);
     await expect(enabledFrame.getBoundingClientRect().height).toBe(180);
   },
 };

@@ -233,12 +233,12 @@ export class WorkspaceResolver {
       userSession: {
         standard: true,
         impersonated: true,
-        playground: true,
+        playground: false,
         workspaceAgnostic: false,
       },
-      apiKey: true,
-      oauthClient: true,
-      application: true,
+      apiKey: false,
+      oauthClient: false,
+      application: false,
     }),
     SettingsPermissionGuard(PermissionFlagType.SECURITY),
   )

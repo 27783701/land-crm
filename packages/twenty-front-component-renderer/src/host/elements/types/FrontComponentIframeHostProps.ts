@@ -3,19 +3,10 @@ import { type IframeHTMLAttributes, type ReactNode } from 'react';
 export type FrontComponentIframeHostProps = {
   iframeProps: Pick<
     IframeHTMLAttributes<HTMLIFrameElement>,
-    | 'src'
-    | 'srcDoc'
-    | 'style'
-    | 'width'
-    | 'height'
-    | 'hidden'
-    | 'sandbox'
-    | 'allow'
+    'src' | 'srcDoc' | 'hidden' | 'sandbox' | 'allow'
   >;
+  iframeElement: Element | null;
   renderIframe: (
-    options: Pick<
-      IframeHTMLAttributes<HTMLIFrameElement>,
-      'allow' | 'sandbox' | 'style'
-    >,
+    options: Pick<IframeHTMLAttributes<HTMLIFrameElement>, 'allow' | 'sandbox'>,
   ) => ReactNode;
 };

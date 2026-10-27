@@ -1,9 +1,12 @@
+import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
 import { ManagedIframe } from '@/media-access/components/ManagedIframe';
 import { useWorkspaceIframeMediaPermissions } from '@/media-access/hooks/useWorkspaceIframeMediaPermissions';
+import { getIsMetadataItemCustom } from '@/object-metadata/utils/getIsMetadataItemCustom';
 import { useIsPageLayoutInEditMode } from '@/page-layout/hooks/useIsPageLayoutInEditMode';
 import { type PageLayoutWidget } from '@/page-layout/types/PageLayoutWidget';
 import { PageLayoutWidgetNoDataDisplay } from '@/page-layout/widgets/components/PageLayoutWidgetNoDataDisplay';
 import { WidgetSkeletonLoader } from '@/page-layout/widgets/components/WidgetSkeletonLoader';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { styled } from '@linaria/react';
 import { useState } from 'react';
 import { MEDIA_CAPABILITIES } from 'twenty-shared/constants';
@@ -62,6 +65,11 @@ type IframeWidgetProps = {
 export const IframeWidget = ({ widget }: IframeWidgetProps) => {
   const isPageLayoutInEditMode = useIsPageLayoutInEditMode();
   const iframeMediaPermissions = useWorkspaceIframeMediaPermissions();
+  const currentWorkspace = useAtomStateValue(currentWorkspaceState);
+  const isWorkspaceWidget = getIsMetadataItemCustom(
+    widget,
+    currentWorkspace?.workspaceCustomApplication?.id,
+  );
 
   const configuration = widget.configuration;
 
@@ -111,7 +119,7 @@ export const IframeWidget = ({ widget }: IframeWidgetProps) => {
         iframeId={widget.id}
         owner={{ type: 'workspace-widget', id: widget.id, name: title }}
         iframeMediaPermissions={iframeMediaPermissions}
-        requestedMediaCapabilities={MEDIA_CAPABILITIES}
+        requestedMediaCapabilities={isWorkspaceWidget ? MEDIA_CAPABILITIES : []}
         src={safeUrl}
         title={title}
         onLoad={handleIframeLoad}

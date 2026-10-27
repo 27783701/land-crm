@@ -1186,7 +1186,7 @@ Request the corresponding features on the iframe:
 />
 ```
 
-For video, use `allow="microphone; camera"` and obtain both grants. Twenty limits delegation to the approved origin and the app's granted capabilities. Members must select the embed's **Enable** control before it receives media access; browser and operating system permissions still apply. `srcDoc` and embeds at Twenty's own origin cannot receive this delegation.
+For video, use `allow="microphone; camera"` and obtain both grants. Twenty limits delegation to the approved origin and the app's granted capabilities. Members must select the embed's **Enable** control before it receives media access; if the app does not hold a requested grant yet, **Enable** first shows the same approval dialog as native capture. Browser and operating system permissions still apply. `srcDoc` and embeds at Twenty's own origin cannot receive this delegation, and neither can `IFRAME` page layout widgets defined by an app: render media embeds from a front component instead.
 
 Enabled embeds appear in the same header indicator as native capture, with **Microphone access enabled** or **Camera access enabled** rather than a claim that recording is active. The indicator stays visible while access is enabled, even if the embed is hidden. **Disable** unloads the iframe and reloads it with media blocked. App capture through `getUserMedia()` continues to report actual capture and retains its own **Stop** control.
 

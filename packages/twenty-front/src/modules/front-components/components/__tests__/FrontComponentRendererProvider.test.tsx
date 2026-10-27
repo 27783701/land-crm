@@ -50,6 +50,7 @@ const renderProviderWithStore = () => {
         applicationId="application-1"
         applicationName="Test application"
         applicationGrantedCapabilities={[]}
+        requestMediaCapabilityApproval={jest.fn()}
       >
         <TestConsumerEffect
           onCallbackResolved={(callback) => {

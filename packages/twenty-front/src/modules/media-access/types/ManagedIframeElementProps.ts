@@ -1,4 +1,4 @@
-import { type IframeHTMLAttributes, type Ref } from 'react';
+import { type IframeHTMLAttributes } from 'react';
 import { type FrontComponentIframeHostProps } from 'twenty-front-component-renderer';
 
 export type ManagedIframeElementProps = Pick<
@@ -25,6 +25,5 @@ export type ManagedIframeElementProps = Pick<
   | 'allow'
   | 'allowFullScreen'
 > & {
-  iframeRef?: Ref<HTMLIFrameElement>;
   renderIframe?: FrontComponentIframeHostProps['renderIframe'];
 };

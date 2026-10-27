@@ -7,4 +7,5 @@ export type ManagedIframeProps = ManagedIframeElementProps & {
   owner: MediaAccessOwner;
   requestedMediaCapabilities?: readonly ('microphone' | 'camera')[];
   iframeMediaPermissions: readonly IframeMediaPermission[];
+  iframeElement?: Element | null;
 };

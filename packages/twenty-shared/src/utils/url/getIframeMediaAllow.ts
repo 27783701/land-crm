@@ -4,7 +4,7 @@ import { type IframeMediaPermission } from '../../types/IframeMediaPermission';
 import { isDefined } from '../validation';
 import { normalizeIframeMediaPermissionOrigin } from './normalizeIframeMediaPermissionOrigin';
 
-const MEDIA_DIRECTIVE_PATTERN = /^(?:microphone|camera)(?:\s|$)/i;
+const MEDIA_DIRECTIVE_PREFIX_PATTERN = /^(?:microphone|camera)/i;
 
 export const getIframeMediaAllow = ({
   allow,
@@ -18,7 +18,8 @@ export const getIframeMediaAllow = ({
     : [];
   const otherDirectives = directives.filter(
     (directive) =>
-      isNonEmptyString(directive) && !MEDIA_DIRECTIVE_PATTERN.test(directive),
+      isNonEmptyString(directive) &&
+      !MEDIA_DIRECTIVE_PREFIX_PATTERN.test(directive),
   );
   const permissionOrigin = permission?.origin;
   const origin = isString(permissionOrigin)
@@ -30,8 +31,8 @@ export const getIframeMediaAllow = ({
     isDefined(origin) && permission?.camera ? origin : "'none'";
 
   return [
-    ...otherDirectives,
     `microphone ${microphoneOrigin}`,
     `camera ${cameraOrigin}`,
+    ...otherDirectives,
   ].join('; ');
 };

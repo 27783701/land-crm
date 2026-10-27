@@ -16,7 +16,43 @@ describe('getIframeMediaAllow', () => {
         allow: " MICROPHONE *; Camera; microphone 'src'; fullscreen; autoplay ",
         permission: null,
       }),
-    ).toBe("fullscreen; autoplay; microphone 'none'; camera 'none'");
+    ).toBe("microphone 'none'; camera 'none'; fullscreen; autoplay");
+  });
+
+  it.each([
+    'camera:*',
+    'camera*',
+    'cameras *',
+    'Microphone:*',
+    'microphones *',
+  ])(
+    'removes the prefixed media directive %s that WebKit also parses as a media feature',
+    (mediaDirective) => {
+      expect(
+        getIframeMediaAllow({
+          allow: `${mediaDirective}; autoplay`,
+          permission: null,
+        }),
+      ).toBe("microphone 'none'; camera 'none'; autoplay");
+    },
+  );
+
+  it('places the enforced media directives before every guest directive so the first declaration wins', () => {
+    expect(
+      getIframeMediaAllow({
+        allow: 'autoplay; fullscreen',
+        permission: {
+          origin: 'https://phone.example.com',
+          microphone: true,
+          camera: false,
+        },
+      }).split('; '),
+    ).toEqual([
+      'microphone https://phone.example.com',
+      "camera 'none'",
+      'autoplay',
+      'fullscreen',
+    ]);
   });
 
   it.each([

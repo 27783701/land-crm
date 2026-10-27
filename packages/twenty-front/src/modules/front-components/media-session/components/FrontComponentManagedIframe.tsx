@@ -11,7 +11,8 @@ import { isDefined } from 'twenty-shared/utils';
 type FrontComponentManagedIframeProps = FrontComponentIframeHostProps;
 
 export const FrontComponentManagedIframe = ({
-  iframeProps: props,
+  iframeProps,
+  iframeElement,
   renderIframe,
 }: FrontComponentManagedIframeProps) => {
   const owner = useContext(FrontComponentIframeOwnerContext);
@@ -26,19 +27,17 @@ export const FrontComponentManagedIframe = ({
     <ManagedIframe
       iframeId={iframeId}
       renderIframe={renderIframe}
+      iframeElement={iframeElement}
       owner={owner}
       iframeMediaPermissions={iframeMediaPermissions}
       requestedMediaCapabilities={getRequestedIframeMediaCapabilities(
-        props.allow,
+        iframeProps.allow,
       )}
-      src={props.src}
-      srcDoc={props.srcDoc}
-      style={props.style}
-      width={props.width}
-      height={props.height}
-      hidden={props.hidden}
-      sandbox={props.sandbox}
-      allow={props.allow}
+      src={iframeProps.src}
+      srcDoc={iframeProps.srcDoc}
+      hidden={iframeProps.hidden}
+      sandbox={iframeProps.sandbox}
+      allow={iframeProps.allow}
     />
   );
 };

@@ -1,4 +1,4 @@
-import { useContext } from 'react';
+import { useContext, useState } from 'react';
 import {
   getIframeMediaAllow,
   isDefined,
@@ -6,6 +6,7 @@ import {
 } from 'twenty-shared/utils';
 
 import { FrontComponentIframeHostContext } from '@/host/elements/contexts/FrontComponentIframeHostContext';
+import { useComposedElementRef } from '@/host/elements/hooks/useComposedElementRef';
 import { useHtmlHostElementProps } from '@/host/elements/hooks/useHtmlHostElementProps';
 import { createPlainHostElement } from '@/host/elements/utils/createPlainHostElement';
 import { getIframeHostReactProps } from '@/host/elements/utils/getIframeHostReactProps';
@@ -17,6 +18,11 @@ export const HostIframeElement = (props: HostIframeElementProps) => {
   const IframeHost = useContext(FrontComponentIframeHostContext);
   const { reactBindableProps, hostEnforcedProps, composedElementRef } =
     useHtmlHostElementProps({ props, htmlTag: 'iframe' });
+  const [iframeElement, setIframeElement] = useState<Element | null>(null);
+  const managedIframeElementRef = useComposedElementRef([
+    composedElementRef,
+    setIframeElement,
+  ]);
 
   if (
     isDefined(IframeHost) &&
@@ -32,7 +38,8 @@ export const HostIframeElement = (props: HostIframeElementProps) => {
     return (
       <IframeHost
         iframeProps={iframeProps}
-        renderIframe={({ allow, sandbox, style }) =>
+        iframeElement={iframeElement}
+        renderIframe={({ allow, sandbox }) =>
           createPlainHostElement({
             htmlTag: 'iframe',
             isVoid: false,
@@ -43,9 +50,8 @@ export const HostIframeElement = (props: HostIframeElementProps) => {
               srcDoc: iframeProps.srcDoc,
               allow,
               sandbox,
-              style,
             },
-            composedElementRef,
+            composedElementRef: managedIframeElementRef,
             children: undefined,
           })
         }

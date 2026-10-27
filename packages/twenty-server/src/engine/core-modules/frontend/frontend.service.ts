@@ -144,11 +144,11 @@ export class FrontendService {
         .map(normalizeAllowedIframeOrigin)
         .filter(isDefined);
 
+      const iframeMediaPermissions = workspace?.iframeMediaPermissions ?? [];
+
       response.setHeader(
         'Permissions-Policy',
-        buildIframeMediaPermissionsPolicy(
-          workspace?.iframeMediaPermissions ?? [],
-        ),
+        buildIframeMediaPermissionsPolicy(iframeMediaPermissions),
       );
 
       if (allowedOrigins.length > 0) {
@@ -159,7 +159,11 @@ export class FrontendService {
         response.removeHeader('X-Frame-Options');
       }
 
-      response.type('html').end(renderFrontendHtml(template, clientConfig));
+      response
+        .type('html')
+        .end(
+          renderFrontendHtml(template, clientConfig, iframeMediaPermissions),
+        );
     } catch (error) {
       this.logger.error('Unable to serve frontend document', error);
       response

@@ -4,7 +4,6 @@ import { getManagedIframeMediaPermission } from '@/media-access/utils/getManaged
 const TRUSTED_ORIGIN = 'https://phone.example.com';
 const DEFAULT_INPUT = {
   src: `${TRUSTED_ORIGIN}/dialer`,
-  owner: { type: 'workspace-widget', id: 'phone', name: 'Phone' },
   requestedMediaCapabilities: ['microphone', 'camera'],
   iframeMediaPermissions: [
     { origin: TRUSTED_ORIGIN, microphone: true, camera: false },
@@ -12,7 +11,7 @@ const DEFAULT_INPUT = {
   hostOrigin: 'https://workspace.twenty.com',
 } satisfies Pick<
   ManagedIframeProps,
-  'src' | 'owner' | 'requestedMediaCapabilities' | 'iframeMediaPermissions'
+  'src' | 'requestedMediaCapabilities' | 'iframeMediaPermissions'
 > & { hostOrigin: string };
 
 describe('getManagedIframeMediaPermission', () => {
@@ -22,26 +21,15 @@ describe('getManagedIframeMediaPermission', () => {
       microphone: true,
       camera: false,
     });
+  });
+
+  it('returns no permission when no requested capability is approved for the origin', () => {
     expect(
       getManagedIframeMediaPermission({
         ...DEFAULT_INPUT,
         requestedMediaCapabilities: ['camera'],
       }),
-    ).toEqual({ origin: TRUSTED_ORIGIN, microphone: false, camera: false });
-  });
-
-  it('also requires the owning application to hold the capability', () => {
-    expect(
-      getManagedIframeMediaPermission({
-        ...DEFAULT_INPUT,
-        owner: {
-          type: 'application',
-          id: 'phone-app',
-          name: 'Phone app',
-          grantedCapabilities: ['camera'],
-        },
-      }),
-    ).toEqual({ origin: TRUSTED_ORIGIN, microphone: false, camera: false });
+    ).toBeNull();
   });
 
   it.each([
@@ -83,6 +71,6 @@ describe('getManagedIframeMediaPermission', () => {
         ...DEFAULT_INPUT,
         requestedMediaCapabilities: undefined,
       }),
-    ).toEqual({ origin: TRUSTED_ORIGIN, microphone: false, camera: false });
+    ).toBeNull();
   });
 });

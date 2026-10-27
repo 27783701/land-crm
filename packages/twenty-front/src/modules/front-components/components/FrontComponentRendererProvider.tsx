@@ -8,6 +8,7 @@ import { FrontComponentInputFocusCleanupEffect } from '@/front-components/compon
 import { FrontComponentManagedIframe } from '@/front-components/media-session/components/FrontComponentManagedIframe';
 import { FrontComponentIframeOwnerContext } from '@/front-components/media-session/contexts/FrontComponentIframeOwnerContext';
 import { FrontComponentInstanceContext } from '@/front-components/states/contexts/FrontComponentInstanceContext';
+import { type RequestMediaCapabilityApproval } from '@/media-access/types/RequestMediaCapabilityApproval';
 import { usePushFocusItemToFocusStack } from '@/ui/utilities/focus/hooks/usePushFocusItemToFocusStack';
 import { useRemoveFocusItemFromFocusStackById } from '@/ui/utilities/focus/hooks/useRemoveFocusItemFromFocusStackById';
 import { FocusComponentType } from '@/ui/utilities/focus/types/FocusComponentType';
@@ -17,6 +18,7 @@ type FrontComponentRendererProviderProps = {
   applicationId: string;
   applicationName: string;
   applicationGrantedCapabilities: readonly string[];
+  requestMediaCapabilityApproval: RequestMediaCapabilityApproval;
   children: React.ReactNode;
 };
 
@@ -25,6 +27,7 @@ export const FrontComponentRendererProvider = ({
   applicationId,
   applicationName,
   applicationGrantedCapabilities,
+  requestMediaCapabilityApproval,
   children,
 }: FrontComponentRendererProviderProps) => {
   const focusId = `front-component-input-focus-${frontComponentId}`;
@@ -65,6 +68,7 @@ export const FrontComponentRendererProvider = ({
             id: applicationId,
             name: applicationName,
             grantedCapabilities: applicationGrantedCapabilities,
+            requestCapabilityApproval: requestMediaCapabilityApproval,
           }}
         >
           <FrontComponentIframeHostContext.Provider

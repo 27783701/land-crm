@@ -1,6 +1,7 @@
 import { ManagedIframeSession } from '@/media-access/components/ManagedIframeSession';
 import { type ManagedIframeProps } from '@/media-access/types/ManagedIframeProps';
 import { getManagedIframeMediaPermission } from '@/media-access/utils/getManagedIframeMediaPermission';
+import { restrictIframeMediaPermission } from '@/media-access/utils/restrictIframeMediaPermission';
 
 export const ManagedIframe = ({
   src,
@@ -24,8 +25,8 @@ export const ManagedIframe = ({
   sandbox,
   allow,
   allowFullScreen,
-  iframeRef,
   renderIframe,
+  iframeElement,
   iframeId,
   owner,
   requestedMediaCapabilities,
@@ -34,18 +35,14 @@ export const ManagedIframe = ({
   const permission = getManagedIframeMediaPermission({
     src,
     srcDoc,
-    owner,
     requestedMediaCapabilities,
     iframeMediaPermissions,
     hostOrigin: window.location.origin,
   });
   const sessionKey = JSON.stringify({
-    src,
-    srcDoc,
     iframeId,
     ownerId: owner.id,
     ownerType: owner.type,
-    permission,
   });
 
   return (
@@ -72,13 +69,24 @@ export const ManagedIframe = ({
       sandbox={sandbox}
       allow={allow}
       allowFullScreen={allowFullScreen}
-      iframeRef={iframeRef}
       renderIframe={renderIframe}
+      iframeElement={iframeElement}
       ownerId={`${owner.type}:${owner.id}`}
       ownerName={owner.name}
-      mediaOrigin={permission?.origin}
-      isMicrophoneAllowed={permission?.microphone ?? false}
-      isCameraAllowed={permission?.camera ?? false}
+      permission={permission}
+      grantedPermission={
+        owner.type === 'application'
+          ? restrictIframeMediaPermission({
+              permission,
+              capabilities: owner.grantedCapabilities,
+            })
+          : permission
+      }
+      requestCapabilityApproval={
+        owner.type === 'application'
+          ? owner.requestCapabilityApproval
+          : undefined
+      }
     />
   );
 };

@@ -1,4 +1,5 @@
 export { FrontComponentRenderer } from '@/host/components/FrontComponentRenderer';
+export { FRONT_COMPONENT_HOST_UI_CLASS_NAME } from '@/constants/FrontComponentHostUiClassName';
 export { FrontComponentIframeHostContext } from '@/host/elements/contexts/FrontComponentIframeHostContext';
 export { type FrontComponentIframeHostProps } from '@/host/elements/types/FrontComponentIframeHostProps';
 export { getRequestedIframeMediaCapabilities } from '@/host/elements/utils/getRequestedIframeMediaCapabilities';

@@ -107,18 +107,20 @@ export const ConfiguresMediaPermissions: StoryObj<typeof meta> = {
       originRow.getByRole('switch', { name: 'Microphone' }),
     ).toBeChecked();
     const cameraSwitch = originRow.getByRole('switch', { name: 'Camera' });
-    await expect(cameraSwitch).not.toBeChecked();
-    await waitFor(() => expect(cameraSwitch).toBeEnabled());
-    await userEvent.click(cameraSwitch);
-    await waitFor(() => expect(cameraSwitch).toBeChecked());
-
     const microphoneSwitch = originRow.getByRole('switch', {
       name: 'Microphone',
     });
+    await expect(cameraSwitch).not.toBeChecked();
+    await waitFor(() => expect(cameraSwitch).toBeEnabled());
+    await expect(microphoneSwitch).toHaveAttribute('aria-disabled', 'true');
+    await userEvent.click(cameraSwitch);
+    await waitFor(() => expect(cameraSwitch).toBeChecked());
+
     await waitFor(() => expect(microphoneSwitch).toBeEnabled());
     await userEvent.click(microphoneSwitch);
     await waitFor(() => expect(microphoneSwitch).not.toBeChecked());
     await expect(cameraSwitch).toBeChecked();
+    await expect(cameraSwitch).toHaveAttribute('aria-disabled', 'true');
     await expect(saveRequest).toHaveBeenLastCalledWith({
       origin: ORIGIN,
       microphone: false,

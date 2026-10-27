@@ -1,6 +1,8 @@
 import { type ManagedIframeProps } from '@/media-access/types/ManagedIframeProps';
 import { isNonEmptyString } from '@sniptt/guards';
+import { type IframeMediaPermission } from 'twenty-shared/types';
 import {
+  getUrlSafely,
   isDefined,
   normalizeIframeMediaPermissionOrigin,
 } from 'twenty-shared/utils';
@@ -8,27 +10,20 @@ import {
 export const getManagedIframeMediaPermission = ({
   src,
   srcDoc,
-  owner,
   requestedMediaCapabilities = [],
   iframeMediaPermissions,
   hostOrigin,
 }: Pick<
   ManagedIframeProps,
-  | 'src'
-  | 'srcDoc'
-  | 'owner'
-  | 'requestedMediaCapabilities'
-  | 'iframeMediaPermissions'
-> & { hostOrigin: string }) => {
+  'src' | 'srcDoc' | 'requestedMediaCapabilities' | 'iframeMediaPermissions'
+> & { hostOrigin: string }): IframeMediaPermission | null => {
   if (!isNonEmptyString(src) || isDefined(srcDoc)) {
     return null;
   }
 
-  let sourceUrl: URL;
+  const sourceUrl = getUrlSafely(src);
 
-  try {
-    sourceUrl = new URL(src);
-  } catch {
+  if (!isDefined(sourceUrl)) {
     return null;
   }
 
@@ -52,16 +47,14 @@ export const getManagedIframeMediaPermission = ({
     return null;
   }
 
-  const grantedCapabilities = requestedMediaCapabilities.filter(
-    (capability) =>
-      permission[capability] &&
-      (owner.type === 'workspace-widget' ||
-        owner.grantedCapabilities.includes(capability)),
-  );
+  const microphone =
+    permission.microphone && requestedMediaCapabilities.includes('microphone');
+  const camera =
+    permission.camera && requestedMediaCapabilities.includes('camera');
 
-  return {
-    origin,
-    microphone: grantedCapabilities.includes('microphone'),
-    camera: grantedCapabilities.includes('camera'),
-  };
+  if (!microphone && !camera) {
+    return null;
+  }
+
+  return { origin, microphone, camera };
 };

@@ -1,3 +1,5 @@
+import { getDocumentIframeMediaPermissions } from '@/media-access/utils/getDocumentIframeMediaPermissions';
+import { intersectIframeMediaPermissions } from '@/media-access/utils/intersectIframeMediaPermissions';
 import { useQuery } from '@apollo/client/react';
 import { isDefined } from 'twenty-shared/utils';
 import { GetWorkspaceIframeMediaPermissionsDocument } from '~/generated-metadata/graphql';
@@ -11,5 +13,10 @@ export const useWorkspaceIframeMediaPermissions = () => {
     return [];
   }
 
-  return data?.currentWorkspace.iframeMediaPermissions ?? [];
+  const permissions = data?.currentWorkspace.iframeMediaPermissions ?? [];
+  const documentPermissions = getDocumentIframeMediaPermissions();
+
+  return isDefined(documentPermissions)
+    ? intersectIframeMediaPermissions({ permissions, documentPermissions })
+    : permissions;
 };

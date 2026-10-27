@@ -148,6 +148,7 @@ const FrontComponentRendererContent = ({
     stopMediaSession,
     permissionModalInstanceId,
     permissionRequest,
+    requestMediaCapabilityApproval,
   } = useFrontComponentMediaSession({
     frontComponentId,
   });
@@ -256,6 +257,7 @@ const FrontComponentRendererContent = ({
           applicationGrantedCapabilities={
             frontComponent.applicationGrantedCapabilities ?? []
           }
+          requestMediaCapabilityApproval={requestMediaCapabilityApproval}
         >
           <SharedFrontComponentRenderer
             colorScheme={colorScheme}

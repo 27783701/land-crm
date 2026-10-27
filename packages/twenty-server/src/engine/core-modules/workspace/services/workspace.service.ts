@@ -83,6 +83,7 @@ import {
   type WorkspaceDeletionApplicationUninstallJobData,
 } from 'src/engine/core-modules/workspace/jobs/workspace-deletion-application-uninstall.job';
 import { getWorkspaceApplicationUninstallLockName } from 'src/engine/core-modules/workspace/utils/get-workspace-application-uninstall-lock-name.util';
+import { upsertIframeMediaPermission } from 'src/engine/core-modules/workspace/utils/upsert-iframe-media-permission.util';
 import { WORKSPACE_REACTIVATED_EVENT } from 'src/engine/core-modules/workspace/constants/workspace-reactivated-event.constant';
 import { WORKSPACE_SOFT_DELETED_EVENT } from 'src/engine/core-modules/workspace/constants/workspace-soft-deleted-event.constant';
 import { WORKSPACE_SUSPENDED_EVENT } from 'src/engine/core-modules/workspace/constants/workspace-suspended-event.constant';
@@ -359,17 +360,14 @@ export class WorkspaceService {
 
         assertIsDefinedOrThrow(workspace, WorkspaceNotFoundDefaultError);
 
-        const iframeMediaPermissions = (
-          workspace.iframeMediaPermissions ?? []
-        ).filter((permission) => permission.origin !== origin);
-
-        if (input.microphone || input.camera) {
-          iframeMediaPermissions.push({
+        const iframeMediaPermissions = upsertIframeMediaPermission({
+          permissions: workspace.iframeMediaPermissions ?? [],
+          permission: {
             origin,
             microphone: input.microphone,
             camera: input.camera,
-          });
-        }
+          },
+        });
 
         if (iframeMediaPermissions.length > MAX_ALLOWED_IFRAME_ORIGINS) {
           throw new WorkspaceException(

@@ -47,7 +47,7 @@ export const SettingsSecurityIframeMediaPermissionRow = ({
         <StyledLabel>
           <Switch
             checked={microphone}
-            disabled={disabled}
+            disabled={disabled || (microphone && !camera)}
             size="sm"
             onCheckedChange={(checked) =>
               void savePermission({ origin, microphone: checked, camera })
@@ -58,7 +58,7 @@ export const SettingsSecurityIframeMediaPermissionRow = ({
         <StyledLabel>
           <Switch
             checked={camera}
-            disabled={disabled}
+            disabled={disabled || (camera && !microphone)}
             size="sm"
             onCheckedChange={(checked) =>
               void savePermission({ origin, microphone, camera: checked })
