@@ -103,7 +103,8 @@ export const AgentChatThreadMarkAsReadEffect = () => {
     const isKeptUnread = visit?.threadId === threadId && visit.isKeptUnread;
     const isReadRequested =
       visit?.threadId === threadId &&
-      visit.readRequestedForActivityAt === lastActivityAt;
+      visit.readRequestedForActivityAt === lastActivityAt &&
+      visit.readRequestedForParticipantUpdatedAt === participant?.updatedAt;
 
     // Opening a chat the member does not participate in yet starts tracking
     // it for them, so later activity in it reads as unread
@@ -117,7 +118,11 @@ export const AgentChatThreadMarkAsReadEffect = () => {
 
     store.set(agentChatThreadVisitState.atom, (currentVisit) =>
       currentVisit?.threadId === threadId
-        ? { ...currentVisit, readRequestedForActivityAt: lastActivityAt }
+        ? {
+            ...currentVisit,
+            readRequestedForActivityAt: lastActivityAt,
+            readRequestedForParticipantUpdatedAt: participant?.updatedAt,
+          }
         : currentVisit,
     );
 
