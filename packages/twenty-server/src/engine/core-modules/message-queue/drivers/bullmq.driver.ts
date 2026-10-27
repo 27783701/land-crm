@@ -59,7 +59,11 @@ export type BullMQDriverOptions = QueueOptions;
 
 type BullMQJobsOptions = JobsOptions & {
   broadcastTo?: QueueJobRecipient;
+  // The scale a fair ticket was reserved on, so a rebase shifts the job exactly by the scales it missed
+  fairBase?: number;
 };
+
+type FairJobOptions = Pick<BullMQJobsOptions, 'priority' | 'fairBase'>;
 
 export class BullMQDriver
   implements MessageQueueDriver, OnModuleDestroy, OnModuleInit
@@ -400,20 +404,20 @@ export class BullMQDriver
     void this.fairPriorityTagger.dispatched({ queueName, jobId: job.id });
   }
 
-  private withFairPriority({
+  private withFairJobOptions({
     queueOptions,
-    fairPriority,
+    fairJobOptions,
   }: {
     queueOptions: BullMQJobsOptions;
-    fairPriority: number | undefined;
+    fairJobOptions: FairJobOptions | undefined;
   }): BullMQJobsOptions {
-    return isDefined(fairPriority)
-      ? { ...queueOptions, priority: fairPriority }
+    return isDefined(fairJobOptions)
+      ? { ...queueOptions, ...fairJobOptions }
       : queueOptions;
   }
 
   // A delayed job is ranked once it is due, so it is neither ticketed nor charged at enqueue
-  private async computeFairPriorities({
+  private async computeFairJobOptions({
     queueName,
     jobsData,
     options,
@@ -421,8 +425,8 @@ export class BullMQDriver
     queueName: MessageQueue;
     jobsData: unknown[];
     options?: Pick<QueueJobOptions, 'groupKeys' | 'urgent' | 'delay'>;
-  }): Promise<(number | undefined)[]> {
-    const staticPriorities: (number | undefined)[] = jobsData.map(
+  }): Promise<(FairJobOptions | undefined)[]> {
+    const staticPriorities: (FairJobOptions | undefined)[] = jobsData.map(
       () => undefined,
     );
 
@@ -454,7 +458,7 @@ export class BullMQDriver
       reservation.jobIndexes.push(jobIndex);
     });
 
-    const tickets = await this.fairPriorityTagger.reserve({
+    const fairTickets = await this.fairPriorityTagger.reserve({
       queueName,
       reservations: reservations.map(({ groupKeys, jobIndexes }) => ({
         groupKeys,
@@ -463,10 +467,10 @@ export class BullMQDriver
     });
 
     if (options?.urgent) {
-      return jobsData.map(() => URGENT_FAIR_PRIORITY);
+      return jobsData.map(() => ({ priority: URGENT_FAIR_PRIORITY }));
     }
 
-    if (!isDefined(tickets)) {
+    if (!isDefined(fairTickets)) {
       void this.metricsService.incrementCounterForEvent({
         key: MetricsKeys.JobFairTagFallback,
         attributes: { queue: queueName },
@@ -476,19 +480,21 @@ export class BullMQDriver
       return staticPriorities;
     }
 
-    const fairPriorities = [...staticPriorities];
+    const { base, tickets } = fairTickets;
+    const fairJobOptions = [...staticPriorities];
 
     reservations.forEach(({ jobIndexes }, reservationIndex) => {
       const { tag, weight } = tickets[reservationIndex];
 
       jobIndexes.forEach((jobIndex, position) => {
-        fairPriorities[jobIndex] = computeFairPriority({
-          tag: tag + position / weight,
-        });
+        fairJobOptions[jobIndex] = {
+          priority: computeFairPriority({ tag: tag + position / weight }),
+          fairBase: base,
+        };
       });
     });
 
-    return fairPriorities;
+    return fairJobOptions;
   }
 
   async addCron<T>({
@@ -630,7 +636,7 @@ export class BullMQDriver
     }
 
     const queueOptions = this.buildJobsOptions(options);
-    const [fairPriority] = await this.computeFairPriorities({
+    const [fairJobOptions] = await this.computeFairJobOptions({
       queueName,
       jobsData: [data],
       options,
@@ -639,7 +645,7 @@ export class BullMQDriver
     const job = await this.queueMap[queueName].add(
       jobName,
       data,
-      this.withFairPriority({ queueOptions, fairPriority }),
+      this.withFairJobOptions({ queueOptions, fairJobOptions }),
     );
 
     return job.id;
@@ -691,7 +697,7 @@ export class BullMQDriver
     }
 
     const queueOptions = this.buildJobsOptions(options);
-    const fairPriorities = await this.computeFairPriorities({
+    const fairJobOptions = await this.computeFairJobOptions({
       queueName,
       jobsData: jobsToAdd.map(({ data }) => data),
       options,
@@ -702,9 +708,9 @@ export class BullMQDriver
         name: jobName,
         data,
         opts: {
-          ...this.withFairPriority({
+          ...this.withFairJobOptions({
             queueOptions,
-            fairPriority: fairPriorities[index],
+            fairJobOptions: fairJobOptions[index],
           }),
           jobId:
             jobId ??
