@@ -93,7 +93,15 @@ export class FairPriorityTagger {
           ...reservations.flatMap(({ groupKeys, batchSize }) => [
             batchSize,
             groupKeys.length,
-            ...groupKeys.map((groupKey) => indexByGroupKey.get(groupKey) ?? 0),
+            ...groupKeys.map((groupKey) => {
+              const keyIndex = indexByGroupKey.get(groupKey);
+
+              if (!isDefined(keyIndex)) {
+                throw new Error(`Group key ${groupKey} has no clock`);
+              }
+
+              return keyIndex;
+            }),
           ]),
         ],
       });
