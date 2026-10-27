@@ -40,8 +40,7 @@ export const ManagedIframeEnableButton = ({
     ],
     whileElementsMounted: autoUpdate,
   });
-  const isHidden =
-    !isPositioned || middlewareData.hide?.referenceHidden === true;
+  const isHidden = !isPositioned || middlewareData.hide?.referenceHidden;
 
   return (
     <StyledControls

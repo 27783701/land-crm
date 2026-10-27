@@ -58,7 +58,7 @@ export const MediaAccessIndicator = () => {
     return t`Media access enabled`;
   };
   const title = getTitle();
-  const sessionsByOwner = groupBy(mediaAccessSessions, (session) =>
+  const sessionsByGroupKey = groupBy(mediaAccessSessions, (session) =>
     session.status === 'delegated'
       ? `${session.ownerId}:delegated:${session.origin}`
       : session.ownerId,
@@ -79,9 +79,14 @@ export const MediaAccessIndicator = () => {
           <StyledPopup initialFocus={false}>
             <Popover.Title>{title}</Popover.Title>
             <StyledApplications role="list" aria-label={title}>
-              {Object.entries(sessionsByOwner).map(([ownerId, sessions]) => (
-                <MediaAccessSessionRow key={ownerId} sessions={sessions} />
-              ))}
+              {Object.entries(sessionsByGroupKey).map(
+                ([sessionGroupKey, sessions]) => (
+                  <MediaAccessSessionRow
+                    key={sessionGroupKey}
+                    sessions={sessions}
+                  />
+                ),
+              )}
             </StyledApplications>
           </StyledPopup>
         </Popover.Positioner>

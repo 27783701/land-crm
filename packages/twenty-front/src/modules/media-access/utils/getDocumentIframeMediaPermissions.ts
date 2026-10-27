@@ -2,6 +2,7 @@ import { isArray, isBoolean, isObject, isString } from '@sniptt/guards';
 import { IFRAME_MEDIA_PERMISSIONS_BOOTSTRAP_ELEMENT_ID } from 'twenty-shared/constants';
 import { type IframeMediaPermission } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
+import { logError } from '~/utils/logError';
 
 const isIframeMediaPermission = (
   value: unknown,
@@ -31,7 +32,9 @@ export const getDocumentIframeMediaPermissions = ():
     return isArray(permissions)
       ? permissions.filter(isIframeMediaPermission)
       : [];
-  } catch {
+  } catch (error) {
+    logError(error);
+
     return [];
   }
 };

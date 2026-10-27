@@ -50,23 +50,23 @@ export const MediaAccessSessionRow = ({
   const mediaTypes = sessions
     .filter((session) => !isCapturing || session.status === 'capturing')
     .flatMap((session) => session.mediaTypes);
-  const usesAudio = mediaTypes.includes('audio');
-  const usesVideo = mediaTypes.includes('video');
+  const hasAudioMediaType = mediaTypes.includes('audio');
+  const hasVideoMediaType = mediaTypes.includes('video');
   const getMediaLabel = () => {
-    if (usesAudio && usesVideo) {
+    if (hasAudioMediaType && hasVideoMediaType) {
       return isDelegated
         ? t`Microphone and camera access enabled`
         : t`Microphone and camera`;
     }
 
-    if (usesVideo) {
+    if (hasVideoMediaType) {
       return isDelegated ? t`Camera access enabled` : t`Camera`;
     }
 
     return isDelegated ? t`Microphone access enabled` : t`Microphone`;
   };
   const { ownerName, origin } = firstSession;
-  const MediaIcon = usesVideo ? IconVideo : IconMicrophone;
+  const MediaIcon = hasVideoMediaType ? IconVideo : IconMicrophone;
   const handleStop = () => {
     for (const session of sessions) {
       session.onStop();
