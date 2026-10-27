@@ -60,7 +60,7 @@ const ManagedIframePreview = ({
       <Button onClick={() => setIsGranted(!isGranted)}>
         {isGranted ? 'Revoke microphone' : 'Grant microphone'}
       </Button>
-      <div style={{ width: 500, height: 250 }} hidden={isHidden}>
+      <div style={{ width: 500, height: 250 }}>
         <ManagedIframe
           iframeId="phone"
           owner={{ type: 'workspace-widget', id: 'phone', name: 'Aircall' }}
@@ -70,6 +70,7 @@ const ManagedIframePreview = ({
           title="Aircall phone"
           width="100%"
           height="100%"
+          hidden={isHidden}
           style={iframeStyle}
           sandbox="allow-scripts allow-forms"
           allow="microphone *; camera *; encrypted-media"
@@ -92,6 +93,12 @@ export const EnableAndDisable: StoryObj<typeof ManagedIframe> = {
     await expect(
       canvas.queryByRole('button', { name: 'Media access enabled' }),
     ).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByRole('button', { name: 'Hide phone' }));
+    await expect(initialFrame).not.toBeVisible();
+    await expect(
+      canvas.queryByRole('button', { name: 'Enable microphone' }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByRole('button', { name: 'Show phone' }));
     await userEvent.click(
       canvas.getByRole('button', { name: 'Enable microphone' }),
     );
@@ -103,6 +110,8 @@ export const EnableAndDisable: StoryObj<typeof ManagedIframe> = {
       "encrypted-media; microphone https://example.com; camera 'none'",
     );
     await userEvent.click(canvas.getByRole('button', { name: 'Hide phone' }));
+    await expect(enabledFrame).not.toBeVisible();
+    await expect(canvas.getByTitle('Aircall phone')).toBe(enabledFrame);
     await userEvent.click(
       canvas.getByRole('button', { name: 'Media access enabled' }),
     );

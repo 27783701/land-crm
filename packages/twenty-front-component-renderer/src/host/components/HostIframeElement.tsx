@@ -24,13 +24,31 @@ export const HostIframeElement = (props: HostIframeElementProps) => {
       getRequestedIframeMediaCapabilities(reactBindableProps.allow),
     )
   ) {
+    const iframeProps = getIframeHostReactProps({
+      ...reactBindableProps,
+      ...hostEnforcedProps,
+    });
+
     return (
       <IframeHost
-        iframeProps={getIframeHostReactProps({
-          ...reactBindableProps,
-          ...hostEnforcedProps,
-        })}
-        iframeRef={composedElementRef}
+        iframeProps={iframeProps}
+        renderIframe={({ allow, sandbox, style }) =>
+          createPlainHostElement({
+            htmlTag: 'iframe',
+            isVoid: false,
+            reactBindableProps,
+            hostEnforcedProps: {
+              ...hostEnforcedProps,
+              src: iframeProps.src,
+              srcDoc: iframeProps.srcDoc,
+              allow,
+              sandbox,
+              style,
+            },
+            composedElementRef,
+            children: undefined,
+          })
+        }
       />
     );
   }

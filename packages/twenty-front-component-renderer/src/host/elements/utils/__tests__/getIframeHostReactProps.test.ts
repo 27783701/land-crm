@@ -1,17 +1,17 @@
 import { getIframeHostReactProps } from '@/host/elements/utils/getIframeHostReactProps';
 
 describe('getIframeHostReactProps', () => {
-  it('keeps supported iframe attributes, dimensions and parsed styles', () => {
+  it('keeps iframe source, dimensions, media options and parsed styles', () => {
     expect(
       getIframeHostReactProps({
         src: 'https://phone.example.com',
         srcDoc: '<p>Sandboxed content</p>',
         width: 400,
         height: '300',
+        hidden: true,
         style: { width: 400, color: 'red', '--phone-color': 'red' },
-        loading: 'lazy',
-        referrerPolicy: 'no-referrer',
-        allowFullScreen: true,
+        sandbox: 'allow-scripts',
+        allow: 'microphone',
       }),
     ).toEqual(
       expect.objectContaining({
@@ -19,10 +19,10 @@ describe('getIframeHostReactProps', () => {
         srcDoc: '<p>Sandboxed content</p>',
         width: 400,
         height: '300',
+        hidden: true,
         style: { width: 400, color: 'red', '--phone-color': 'red' },
-        loading: 'lazy',
-        referrerPolicy: 'no-referrer',
-        allowFullScreen: true,
+        sandbox: 'allow-scripts',
+        allow: 'microphone',
       }),
     );
   });
@@ -34,11 +34,8 @@ describe('getIframeHostReactProps', () => {
       allow: true,
       sandbox: ['allow-same-origin'],
       width: false,
+      hidden: 'true',
       style: { width: {}, height: 300 },
-      loading: 'invalid',
-      referrerPolicy: 'invalid',
-      onLoad: 'alert(1)',
-      allowFullScreen: 'true',
       iframeMediaPermissions: [{ origin: 'https://phone.example.com' }],
     });
 
@@ -49,11 +46,8 @@ describe('getIframeHostReactProps', () => {
         allow: undefined,
         sandbox: undefined,
         width: undefined,
+        hidden: undefined,
         style: { height: 300 },
-        loading: undefined,
-        referrerPolicy: undefined,
-        onLoad: undefined,
-        allowFullScreen: undefined,
       }),
     );
     expect(props).not.toHaveProperty('iframeMediaPermissions');

@@ -1,7 +1,21 @@
-import { type ElementRefCallback } from '@/host/elements/types/ElementRefCallback';
-import { type IframeHTMLAttributes } from 'react';
+import { type IframeHTMLAttributes, type ReactNode } from 'react';
 
 export type FrontComponentIframeHostProps = {
-  iframeProps: IframeHTMLAttributes<HTMLIFrameElement>;
-  iframeRef: ElementRefCallback;
+  iframeProps: Pick<
+    IframeHTMLAttributes<HTMLIFrameElement>,
+    | 'src'
+    | 'srcDoc'
+    | 'style'
+    | 'width'
+    | 'height'
+    | 'hidden'
+    | 'sandbox'
+    | 'allow'
+  >;
+  renderIframe: (
+    options: Pick<
+      IframeHTMLAttributes<HTMLIFrameElement>,
+      'allow' | 'sandbox' | 'style'
+    >,
+  ) => ReactNode;
 };

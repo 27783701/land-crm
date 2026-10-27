@@ -12,6 +12,7 @@ export const ManagedIframe = ({
   style,
   width,
   height,
+  hidden,
   loading,
   referrerPolicy,
   tabIndex,
@@ -24,6 +25,7 @@ export const ManagedIframe = ({
   allow,
   allowFullScreen,
   iframeRef,
+  renderIframe,
   iframeId,
   owner,
   requestedMediaCapabilities,
@@ -58,6 +60,7 @@ export const ManagedIframe = ({
       style={style}
       width={width}
       height={height}
+      hidden={hidden}
       loading={loading}
       referrerPolicy={referrerPolicy}
       tabIndex={tabIndex}
@@ -70,6 +73,7 @@ export const ManagedIframe = ({
       allow={allow}
       allowFullScreen={allowFullScreen}
       iframeRef={iframeRef}
+      renderIframe={renderIframe}
       ownerId={`${owner.type}:${owner.id}`}
       ownerName={owner.name}
       mediaOrigin={permission?.origin}

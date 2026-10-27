@@ -12,7 +12,7 @@ type FrontComponentManagedIframeProps = FrontComponentIframeHostProps;
 
 export const FrontComponentManagedIframe = ({
   iframeProps: props,
-  iframeRef,
+  renderIframe,
 }: FrontComponentManagedIframeProps) => {
   const owner = useContext(FrontComponentIframeOwnerContext);
   const iframeId = useId();
@@ -25,7 +25,7 @@ export const FrontComponentManagedIframe = ({
   return (
     <ManagedIframe
       iframeId={iframeId}
-      iframeRef={iframeRef}
+      renderIframe={renderIframe}
       owner={owner}
       iframeMediaPermissions={iframeMediaPermissions}
       requestedMediaCapabilities={getRequestedIframeMediaCapabilities(
@@ -33,24 +33,12 @@ export const FrontComponentManagedIframe = ({
       )}
       src={props.src}
       srcDoc={props.srcDoc}
-      title={props.title}
-      id={props.id}
-      name={props.name}
-      className={props.className}
       style={props.style}
       width={props.width}
       height={props.height}
-      loading={props.loading}
-      referrerPolicy={props.referrerPolicy}
-      tabIndex={props.tabIndex}
-      onLoad={props.onLoad}
-      onError={props.onError}
-      onClick={props.onClick}
-      onFocus={props.onFocus}
-      onBlur={props.onBlur}
+      hidden={props.hidden}
       sandbox={props.sandbox}
       allow={props.allow}
-      allowFullScreen={props.allowFullScreen}
     />
   );
 };

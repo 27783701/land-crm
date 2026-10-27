@@ -86,4 +86,72 @@ describe('HostIframeElement', () => {
     expect(iframe?.getAttribute('data-embed-kind')).toBe('document');
     expect(iframe?.className).toBe('document-frame');
   });
+
+  it('preserves native iframe attributes and handlers while enforcing managed media options', () => {
+    const onKeyDown = jest.fn();
+    const TrustedIframeHost = jest.fn(
+      ({ renderIframe }: FrontComponentIframeHostProps) =>
+        renderIframe({
+          allow: "microphone 'none'; camera 'none'",
+          sandbox: 'allow-scripts',
+          style: { width: '100%', height: '100%' },
+        }),
+    );
+    const markup = renderToStaticMarkup(
+      <FrontComponentIframeHostContext.Provider value={TrustedIframeHost}>
+        <HostIframeElement
+          src="https://phone.example.com"
+          allow="microphone *"
+          sandbox="allow-scripts allow-same-origin"
+          aria-label="Phone"
+          aria-describedby="phone-description"
+          data-embed-kind="phone"
+          hidden
+          onKeyDown={onKeyDown}
+        />
+      </FrontComponentIframeHostContext.Provider>,
+    );
+    const iframe = findIframe(markup);
+
+    expect(iframe?.getAttribute('aria-label')).toBe('Phone');
+    expect(iframe?.getAttribute('aria-describedby')).toBe('phone-description');
+    expect(iframe?.getAttribute('data-embed-kind')).toBe('phone');
+    expect(iframe?.hasAttribute('hidden')).toBe(true);
+    expect(iframe?.getAttribute('allow')).toBe(
+      "microphone 'none'; camera 'none'",
+    );
+    expect(iframe?.getAttribute('sandbox')).toBe('allow-scripts');
+    expect(iframe?.style.width).toBe('100%');
+    expect(TrustedIframeHost.mock.results[0]?.value).toEqual(
+      expect.objectContaining({
+        props: expect.objectContaining({ onKeyDown: expect.any(Function) }),
+      }),
+    );
+  });
+
+  it('renders the validated source values used by the managed permission check', () => {
+    const TrustedIframeHost = jest.fn(
+      ({ renderIframe }: FrontComponentIframeHostProps) =>
+        renderIframe({
+          allow: 'microphone https://phone.example.com',
+          sandbox: 'allow-scripts allow-same-origin',
+        }),
+    );
+    const markup = renderToStaticMarkup(
+      <FrontComponentIframeHostContext.Provider value={TrustedIframeHost}>
+        <HostIframeElement
+          src="https://phone.example.com"
+          srcDoc={['<script>parent.document.title = "Injected"</script>']}
+          allow="microphone"
+        />
+      </FrontComponentIframeHostContext.Provider>,
+    );
+    const iframe = findIframe(markup);
+
+    expect(
+      TrustedIframeHost.mock.calls[0]?.[0].iframeProps.srcDoc,
+    ).toBeUndefined();
+    expect(iframe?.getAttribute('src')).toBe('https://phone.example.com');
+    expect(iframe?.hasAttribute('srcdoc')).toBe(false);
+  });
 });

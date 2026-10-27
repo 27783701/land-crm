@@ -6,7 +6,7 @@ import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomStat
 import { styled } from '@linaria/react';
 import { t } from '@lingui/core/macro';
 import { isNonEmptyString } from '@sniptt/guards';
-import { useId, useState } from 'react';
+import { Fragment, useId, useState } from 'react';
 import { getIframeMediaAllow, isDefined } from 'twenty-shared/utils';
 import { Button } from 'twenty-ui/primitives/input';
 import { themeCssVariables } from 'twenty-ui/theme';
@@ -14,6 +14,10 @@ import { themeCssVariables } from 'twenty-ui/theme';
 const StyledContainer = styled.div`
   display: inline-flex;
   position: relative;
+
+  &[hidden] {
+    display: none;
+  }
 `;
 
 const StyledControls = styled.div`
@@ -46,6 +50,7 @@ export const ManagedIframeSession = ({
   style,
   width,
   height,
+  hidden,
   loading,
   referrerPolicy,
   tabIndex,
@@ -58,6 +63,7 @@ export const ManagedIframeSession = ({
   allow,
   allowFullScreen,
   iframeRef,
+  renderIframe,
   ownerId,
   ownerName,
   mediaOrigin,
@@ -130,33 +136,44 @@ export const ManagedIframeSession = ({
 
   return (
     <StyledContainer
+      hidden={hidden}
       style={getManagedIframeContainerStyle({ style, width, height })}
     >
       <MediaAccessSessionCleanupEffect id={mediaAccessSessionId} />
-      <iframe
-        key={isActivated ? 'media-enabled' : 'media-disabled'}
-        ref={iframeRef}
-        src={src}
-        srcDoc={srcDoc}
-        title={title}
-        id={id}
-        name={name}
-        className={className}
-        style={{ ...style, width: '100%', height: '100%' }}
-        width={width}
-        height={height}
-        loading={loading}
-        referrerPolicy={referrerPolicy}
-        tabIndex={tabIndex}
-        onLoad={onLoad}
-        onError={onError}
-        onClick={onClick}
-        onFocus={onFocus}
-        onBlur={onBlur}
-        sandbox={iframeSandbox}
-        allow={iframeAllow}
-        allowFullScreen={allowFullScreen}
-      />
+      <Fragment key={isActivated ? 'media-enabled' : 'media-disabled'}>
+        {isDefined(renderIframe) ? (
+          renderIframe({
+            allow: iframeAllow,
+            sandbox: iframeSandbox,
+            style: { ...style, width: '100%', height: '100%' },
+          })
+        ) : (
+          <iframe
+            ref={iframeRef}
+            src={src}
+            srcDoc={srcDoc}
+            title={title}
+            id={id}
+            name={name}
+            className={className}
+            style={{ ...style, width: '100%', height: '100%' }}
+            width={width}
+            height={height}
+            hidden={hidden}
+            loading={loading}
+            referrerPolicy={referrerPolicy}
+            tabIndex={tabIndex}
+            onLoad={onLoad}
+            onError={onError}
+            onClick={onClick}
+            onFocus={onFocus}
+            onBlur={onBlur}
+            sandbox={iframeSandbox}
+            allow={iframeAllow}
+            allowFullScreen={allowFullScreen}
+          />
+        )}
+      </Fragment>
       {canEnableMedia && !isActivated && (
         <StyledControls>
           <Button size="sm" variant="outline" onClick={handleEnable}>
