@@ -1,3 +1,4 @@
+import { isString } from '@sniptt/guards';
 import { useContext, useState } from 'react';
 import {
   getIframeMediaAllow,
@@ -23,12 +24,13 @@ export const HostIframeElement = (props: HostIframeElementProps) => {
     composedElementRef,
     setIframeElement,
   ]);
+  const allow = isString(reactBindableProps.allow)
+    ? reactBindableProps.allow
+    : undefined;
 
   if (
     isDefined(IframeHost) &&
-    isNonEmptyArray(
-      getRequestedIframeMediaCapabilities(reactBindableProps.allow),
-    )
+    isNonEmptyArray(getRequestedIframeMediaCapabilities(allow))
   ) {
     const iframeProps = getIframeHostReactProps({
       ...reactBindableProps,
@@ -65,7 +67,7 @@ export const HostIframeElement = (props: HostIframeElementProps) => {
     reactBindableProps,
     hostEnforcedProps: {
       ...hostEnforcedProps,
-      allow: getIframeMediaAllow({ allow: reactBindableProps.allow }),
+      allow: getIframeMediaAllow({ allow }),
     },
     composedElementRef,
     children: undefined,

@@ -29,15 +29,10 @@ describe('getRequestedIframeMediaCapabilities', () => {
     ).toEqual([]);
   });
 
-  it.each([
-    undefined,
-    null,
-    {},
-    1,
-    true,
-    '',
-    'microphone-extra *; speaker-selection',
-  ])('ignores unsupported permission value %s', (allow) => {
-    expect(getRequestedIframeMediaCapabilities(allow)).toEqual([]);
-  });
+  it.each([undefined, '', 'microphone-extra *; speaker-selection'])(
+    'finds no media request in the allow value %p',
+    (allow) => {
+      expect(getRequestedIframeMediaCapabilities(allow)).toEqual([]);
+    },
+  );
 });

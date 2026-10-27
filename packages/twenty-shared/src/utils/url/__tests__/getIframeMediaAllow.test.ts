@@ -1,8 +1,8 @@
 import { getIframeMediaAllow } from '../getIframeMediaAllow';
 
 describe('getIframeMediaAllow', () => {
-  it.each([undefined, null, {}, 1, true])(
-    'denies media by default for unsupported allow value %s',
+  it.each([undefined, ''])(
+    'denies media by default for the allow value %p',
     (allow) => {
       expect(getIframeMediaAllow({ allow })).toBe(
         "microphone 'none'; camera 'none'",

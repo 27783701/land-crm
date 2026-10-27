@@ -1,13 +1,9 @@
-import { isNonEmptyString, isString } from '@sniptt/guards';
+import { isNonEmptyString } from '@sniptt/guards';
 import { MEDIA_CAPABILITIES } from 'twenty-shared/constants';
 import { isDefined } from 'twenty-shared/utils';
 
-export const getRequestedIframeMediaCapabilities = (allow: unknown) => {
-  if (!isString(allow)) {
-    return [];
-  }
-
-  const directives = allow
+export const getRequestedIframeMediaCapabilities = (allow?: string) => {
+  const directives = (allow ?? '')
     .split(';')
     .map((directive) =>
       directive.trim().toLowerCase().split(/\s+/).filter(isNonEmptyString),

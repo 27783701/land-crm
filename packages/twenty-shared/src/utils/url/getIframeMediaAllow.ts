@@ -1,4 +1,4 @@
-import { isNonEmptyString, isString } from '@sniptt/guards';
+import { isNonEmptyString } from '@sniptt/guards';
 
 import { type IframeMediaPermission } from '../../types/IframeMediaPermission';
 import { isDefined } from '../validation';
@@ -10,20 +10,19 @@ export const getIframeMediaAllow = ({
   allow,
   permission,
 }: {
-  allow: unknown;
+  allow?: string;
   permission?: IframeMediaPermission | null;
 }): string => {
-  const directives = isString(allow)
-    ? allow.split(';').map((directive) => directive.trim())
-    : [];
-  const otherDirectives = directives.filter(
-    (directive) =>
-      isNonEmptyString(directive) &&
-      !MEDIA_DIRECTIVE_PREFIX_PATTERN.test(directive),
-  );
-  const permissionOrigin = permission?.origin;
-  const origin = isString(permissionOrigin)
-    ? normalizeIframeMediaPermissionOrigin(permissionOrigin)
+  const otherDirectives = (allow ?? '')
+    .split(';')
+    .map((directive) => directive.trim())
+    .filter(
+      (directive) =>
+        isNonEmptyString(directive) &&
+        !MEDIA_DIRECTIVE_PREFIX_PATTERN.test(directive),
+    );
+  const origin = isDefined(permission)
+    ? normalizeIframeMediaPermissionOrigin(permission.origin)
     : undefined;
   const microphoneOrigin =
     isDefined(origin) && permission?.microphone ? origin : "'none'";
