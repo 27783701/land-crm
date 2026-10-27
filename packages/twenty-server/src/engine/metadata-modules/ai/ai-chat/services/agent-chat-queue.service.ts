@@ -3,14 +3,13 @@ import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 
 import { FileFolder } from 'twenty-shared/types';
-import { isDefined, isNonEmptyArray } from 'twenty-shared/utils';
+import { isNonEmptyArray } from 'twenty-shared/utils';
 import { In, Like } from 'typeorm';
 
 import { FileEntity } from 'src/engine/core-modules/file/entities/file.entity';
 import { AgentChatThreadParticipantService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-thread-participant.service';
 import { AgentChatThreadService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-thread.service';
 import { type AiChatFileAttachment } from 'src/engine/metadata-modules/ai/ai-chat/types/ai-chat-file-attachment.type';
-import { getAgentMessageTable } from 'src/engine/metadata-modules/ai/ai-chat/utils/get-agent-message-table.util';
 import { resolveMessageSenderApplicationId } from 'src/engine/metadata-modules/ai/ai-chat/utils/resolve-message-sender-application-id.util';
 import { AgentMessageRole } from 'src/engine/metadata-modules/ai/ai-history/enums/agent-message-role.enum';
 import { AgentMessageStatus } from 'src/engine/metadata-modules/ai/ai-history/enums/agent-message-status.enum';
@@ -104,18 +103,16 @@ export class AgentChatQueueService {
 
     await this.conversationWriterService.runInTransaction(
       workspaceId,
-      (scope) =>
-        this.participantService.resolveMentionByQueuedMessageInTransaction({
+      async (scope) => {
+        await this.participantService.resolveMentionInTransaction({
           workspaceId,
           workspaceMemberId,
           threadId,
-          messageId: savedMessageId,
           scope,
-          writeQueuedMessage: async () => {
-            await scope.insert('agentMessage', messageValues);
-            await scope.insert('agentMessagePart', parts);
-          },
-        }),
+        });
+        await scope.insert('agentMessage', messageValues);
+        await scope.insert('agentMessagePart', parts);
+      },
     );
 
     await this.threadService.notifyThreadActivityUpdated({
@@ -177,40 +174,12 @@ export class AgentChatQueueService {
     messageId: string;
     workspaceId: string;
   }): Promise<boolean> {
-    return this.conversationWriterService.runInTransaction(
-      workspaceId,
-      async (scope) => {
-        // The creation time stays text, as a JS Date would drop its microseconds
-        const [deletedMessage] = await scope.executeRawQuery<{
-          threadId: string;
-          senderWorkspaceMemberId: string | null;
-          createdAt: string;
-        }>({
-          sql: `DELETE FROM ${getAgentMessageTable(workspaceId)}
-            WHERE id = $1 AND status = $2
-            RETURNING "threadId", "senderWorkspaceMemberId", "createdAt"::text AS "createdAt"`,
-          parameters: [messageId, AgentMessageStatus.QUEUED],
-        });
+    const result = await this.messageRepository.delete(workspaceId, {
+      id: messageId,
+      status: AgentMessageStatus.QUEUED,
+    });
 
-        if (!isDefined(deletedMessage)) {
-          return false;
-        }
-
-        if (isDefined(deletedMessage.senderWorkspaceMemberId)) {
-          await this.participantService.reopenMentionOfDeletedQueuedMessageInTransaction(
-            {
-              workspaceId,
-              workspaceMemberId: deletedMessage.senderWorkspaceMemberId,
-              threadId: deletedMessage.threadId,
-              messageCreatedAt: deletedMessage.createdAt,
-              scope,
-            },
-          );
-        }
-
-        return true;
-      },
-    );
+    return (result.affected ?? 0) > 0;
   }
 
   async promoteQueuedMessage({

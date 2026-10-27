@@ -1377,7 +1377,7 @@ describe('Chat thread participant state through the authenticated API', () => {
         expect(blockedLocks).not.toHaveLength(0);
       });
 
-    it('reopens the mention when the reply is deleted before it is sent', async () => {
+    it('resolves the mention when the member queues a reply and keeps it after the reply is deleted', async () => {
       const threadId = await createTestThread();
 
       await addParticipants(threadId, [WORKSPACE_MEMBER_DATA_SEED_IDS.JONY]);
@@ -1388,32 +1388,8 @@ describe('Chat thread participant state through the authenticated API', () => {
         APPLE_JONY_MEMBER_ACCESS_TOKEN,
       );
 
-      expect(repliedParticipant!.lastResolvedMentionAt).not.toBeNull();
-
-      await deleteQueuedReply(reply.id);
-
-      expect(
-        await findMyParticipant(threadId, APPLE_JONY_MEMBER_ACCESS_TOKEN),
-      ).toMatchObject({
-        lastMentionedAt: repliedParticipant!.lastMentionedAt,
-        lastResolvedMentionAt: null,
-      });
-    });
-
-    it('keeps the mention resolved when the member filed the chat after replying', async () => {
-      const threadId = await createTestThread();
-
-      await addParticipants(threadId, [WORKSPACE_MEMBER_DATA_SEED_IDS.JONY]);
-
-      const reply = await queueReply(threadId);
-
-      await runInboxAction('ARCHIVE', threadId, {
-        token: APPLE_JONY_MEMBER_ACCESS_TOKEN,
-      });
-
-      const filedParticipant = await findMyParticipant(
-        threadId,
-        APPLE_JONY_MEMBER_ACCESS_TOKEN,
+      expect(repliedParticipant!.lastResolvedMentionAt).toBe(
+        repliedParticipant!.lastMentionedAt,
       );
 
       await deleteQueuedReply(reply.id);
@@ -1421,7 +1397,7 @@ describe('Chat thread participant state through the authenticated API', () => {
       expect(
         await findMyParticipant(threadId, APPLE_JONY_MEMBER_ACCESS_TOKEN),
       ).toMatchObject({
-        lastResolvedMentionAt: filedParticipant!.lastResolvedMentionAt,
+        lastResolvedMentionAt: repliedParticipant!.lastMentionedAt,
       });
     });
 

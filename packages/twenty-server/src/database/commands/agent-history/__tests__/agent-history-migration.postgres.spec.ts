@@ -303,14 +303,7 @@ const createWorkspaceObjectTable = async ({
     const createQueueService = ({
       messageRepository,
       participantService = {
-        resolveMentionByQueuedMessageInTransaction: jest.fn(
-          ({
-            writeQueuedMessage,
-          }: {
-            writeQueuedMessage: () => Promise<void>;
-          }) => writeQueuedMessage(),
-        ),
-        reopenMentionOfDeletedQueuedMessageInTransaction: jest.fn(),
+        resolveMentionInTransaction: jest.fn(),
       } as never,
     }: {
       messageRepository: typeof messages;
@@ -1740,15 +1733,15 @@ const createWorkspaceObjectTable = async ({
           return { ...mentionState, queue, queueReply };
         };
 
-        it('reopens the mention when the reply is deleted before it is sent', async () => {
+        it('resolves the mention when the member queues a reply and keeps it after the reply is deleted', async () => {
           const { queue, queueReply, readParticipant } =
             await setUpQueuedReply();
           const mentioned = await readParticipant();
           const reply = await queueReply();
 
-          expect(
-            (await readParticipant()).lastResolvedMentionAt,
-          ).not.toBeNull();
+          expect(await readParticipant()).toMatchObject({
+            lastResolvedMentionAt: mentioned.lastMentionedAt,
+          });
 
           await queue.deleteQueuedMessage({
             workspaceId: WORKSPACE_ID,
@@ -1756,85 +1749,7 @@ const createWorkspaceObjectTable = async ({
           });
 
           expect(await readParticipant()).toMatchObject({
-            lastMentionedAt: mentioned.lastMentionedAt,
-            lastResolvedMentionAt: null,
-          });
-        });
-
-        it('keeps the mention resolved when the member filed the chat after replying', async () => {
-          const {
-            participantService,
-            memberThreadAccess,
-            queue,
-            queueReply,
-            readParticipant,
-          } = await setUpQueuedReply();
-          const reply = await queueReply();
-
-          await participantService.updateInboxState({
-            ...memberThreadAccess,
-            threadIds: [memberThreadAccess.threadId],
-            action: AgentChatInboxAction.ARCHIVE,
-            snoozedUntil: null,
-          });
-
-          const filed = await readParticipant();
-
-          await queue.deleteQueuedMessage({
-            workspaceId: WORKSPACE_ID,
-            messageId: reply.id,
-          });
-
-          expect(await readParticipant()).toMatchObject({
-            lastResolvedMentionAt: filed.lastResolvedMentionAt,
-          });
-        });
-
-        it('keeps the mention resolved while another reply of the member is kept', async () => {
-          const { queue, queueReply, readParticipant } =
-            await setUpQueuedReply();
-          const firstReply = await queueReply();
-
-          await queueReply();
-
-          const replied = await readParticipant();
-
-          await queue.deleteQueuedMessage({
-            workspaceId: WORKSPACE_ID,
-            messageId: firstReply.id,
-          });
-
-          expect(await readParticipant()).toMatchObject({
-            lastResolvedMentionAt: replied.lastResolvedMentionAt,
-          });
-        });
-
-        it('keeps a mention resolved before the reply was queued', async () => {
-          const {
-            participantService,
-            memberThreadAccess,
-            queue,
-            queueReply,
-            readParticipant,
-          } = await setUpQueuedReply();
-
-          await participantService.updateInboxState({
-            ...memberThreadAccess,
-            threadIds: [memberThreadAccess.threadId],
-            action: AgentChatInboxAction.ARCHIVE,
-            snoozedUntil: null,
-          });
-
-          const filed = await readParticipant();
-          const reply = await queueReply();
-
-          await queue.deleteQueuedMessage({
-            workspaceId: WORKSPACE_ID,
-            messageId: reply.id,
-          });
-
-          expect(await readParticipant()).toMatchObject({
-            lastResolvedMentionAt: filed.lastResolvedMentionAt,
+            lastResolvedMentionAt: mentioned.lastMentionedAt,
           });
         });
       });

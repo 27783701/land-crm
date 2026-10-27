@@ -25,8 +25,6 @@ import { buildAgentChatThreadParticipantOwnerShareInsert } from 'src/engine/meta
 import { buildAgentChatThreadActivitySetClause } from 'src/engine/metadata-modules/ai/ai-chat/utils/build-agent-chat-thread-activity-set-clause.util';
 import { buildAgentChatThreadParticipantLockKey } from 'src/engine/metadata-modules/ai/ai-chat/utils/build-agent-chat-thread-participant-lock-key.util';
 import { getAgentChatThreadParticipantTable } from 'src/engine/metadata-modules/ai/ai-chat/utils/get-agent-chat-thread-participant-table.util';
-import { getAgentMessageTable } from 'src/engine/metadata-modules/ai/ai-chat/utils/get-agent-message-table.util';
-import { AgentMessageRole } from 'src/engine/metadata-modules/ai/ai-history/enums/agent-message-role.enum';
 import { throwAgentChatThreadNotFound } from 'src/engine/metadata-modules/ai/ai-chat/utils/throw-agent-chat-thread-not-found.util';
 import { findAgentChatSnoozeRemainingDelay } from 'src/engine/metadata-modules/ai/ai-chat/utils/find-agent-chat-snooze-remaining-delay.util';
 import { AgentHistoryRepository } from 'src/engine/metadata-modules/ai/ai-history/repositories/agent-history-repository';
@@ -337,94 +335,6 @@ export class AgentChatThreadParticipantService {
       }),
       parameters: [args.threadId, args.workspaceMemberId],
     });
-  }
-
-  // Stamped with the queued message's time, so deleting it unsent can reopen the mention
-  async resolveMentionByQueuedMessageInTransaction({
-    scope,
-    messageId,
-    writeQueuedMessage,
-    ...args
-  }: AgentChatThreadAccessArgs & {
-    scope: Pick<AgentHistoryTransactionScope, 'executeRawQuery'>;
-    messageId: string;
-    writeQueuedMessage: () => Promise<void>;
-  }): Promise<void> {
-    await this.sharingService.assertHasMentionResolutionOrThrow(
-      args.workspaceId,
-    );
-    await this.lockInTransaction({ scope, ...args });
-    await writeQueuedMessage();
-    await scope.executeRawQuery({
-      sql: `UPDATE ${getAgentChatThreadParticipantTable(args.workspaceId)} AS participant
-        SET "lastResolvedMentionAt" = GREATEST(participant."lastMentionedAt", message."createdAt"),
-          "updatedAt" = ${NEXT_PARTICIPANT_UPDATED_AT}
-        FROM ${getAgentMessageTable(args.workspaceId)} message
-        WHERE message.id = $3
-          AND participant."threadId" = $1 AND participant."workspaceMemberId" = $2
-          AND participant."lastMentionedAt" IS NOT NULL
-          AND (participant."lastResolvedMentionAt" IS NULL OR participant."lastMentionedAt" > participant."lastResolvedMentionAt")`,
-      parameters: [args.threadId, args.workspaceMemberId, messageId],
-    });
-  }
-
-  async reopenMentionOfDeletedQueuedMessageInTransaction({
-    scope,
-    messageCreatedAt,
-    ...args
-  }: AgentChatThreadAccessArgs & {
-    scope: Pick<
-      AgentHistoryTransactionScope,
-      'executeRawQuery' | 'afterCommit'
-    >;
-    messageCreatedAt: string;
-  }): Promise<void> {
-    await this.sharingService.assertHasMentionResolutionOrThrow(
-      args.workspaceId,
-    );
-    await this.lockInTransaction({ scope, ...args });
-
-    const participantTable = getAgentChatThreadParticipantTable(
-      args.workspaceId,
-    );
-    const parameters = [args.threadId, args.workspaceMemberId];
-    const [before] = await scope.executeRawQuery<AgentChatThreadParticipantRow>(
-      {
-        sql: `SELECT ${PARTICIPANT_COLUMNS} FROM ${participantTable}
-          WHERE "threadId" = $1 AND "workspaceMemberId" = $2`,
-        parameters,
-      },
-    );
-    const [after] = await scope.executeRawQuery<AgentChatThreadParticipantRow>({
-      sql: `UPDATE ${participantTable} AS participant
-        SET "lastResolvedMentionAt" = NULL, "updatedAt" = ${NEXT_PARTICIPANT_UPDATED_AT}
-        WHERE participant."threadId" = $1 AND participant."workspaceMemberId" = $2
-          AND participant."lastResolvedMentionAt" = $3::timestamptz
-          AND participant."lastMentionedAt" <= participant."lastResolvedMentionAt"
-          AND (participant."archivedAt" IS NULL OR participant."archivedAt" <= $3::timestamptz OR participant."snoozedUntil" IS NOT NULL)
-          AND NOT EXISTS (
-            SELECT 1 FROM ${getAgentMessageTable(args.workspaceId)} message
-            WHERE message."threadId" = participant."threadId"
-              AND message."senderWorkspaceMemberId" = participant."workspaceMemberId"
-              AND message.role = $4
-              AND message."deletedAt" IS NULL
-              AND message."createdAt" > participant."lastMentionedAt"
-          )
-        RETURNING ${PARTICIPANT_COLUMNS}`,
-      parameters: [...parameters, messageCreatedAt, AgentMessageRole.USER],
-    });
-
-    if (!isDefined(after)) {
-      return;
-    }
-
-    scope.afterCommit(() =>
-      this.participantEventService.emitParticipantWritten({
-        workspaceId: args.workspaceId,
-        before: before ?? null,
-        after,
-      }),
-    );
   }
 
   // An assignee follows the chat and finds it in their inbox, unread unless
