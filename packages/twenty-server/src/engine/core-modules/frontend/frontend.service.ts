@@ -159,11 +159,13 @@ export class FrontendService {
         response.removeHeader('X-Frame-Options');
       }
 
-      response
-        .type('html')
-        .end(
-          renderFrontendHtml(template, clientConfig, iframeMediaPermissions),
-        );
+      response.type('html').end(
+        renderFrontendHtml({
+          template,
+          clientConfig,
+          iframeMediaPermissions,
+        }),
+      );
     } catch (error) {
       this.logger.error('Unable to serve frontend document', error);
       response

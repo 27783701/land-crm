@@ -4,14 +4,17 @@ import {
 } from 'twenty-shared/constants';
 import { type IframeMediaPermission } from 'twenty-shared/types';
 
-import { type ClientConfig } from 'src/engine/core-modules/client-config/client-config.entity';
 import { serializeJsonForHtmlScript } from 'src/engine/core-modules/frontend/utils/serialize-json-for-html-script.util';
 
-export const renderFrontendHtml = (
-  template: string,
-  clientConfig: ClientConfig,
-  iframeMediaPermissions: IframeMediaPermission[],
-): string =>
+export const renderFrontendHtml = ({
+  template,
+  clientConfig,
+  iframeMediaPermissions,
+}: {
+  template: string;
+  clientConfig: object;
+  iframeMediaPermissions: IframeMediaPermission[];
+}): string =>
   template
     .replace(
       /<!-- BEGIN: Twenty Config -->[\s\S]*?<!-- END: Twenty Config -->/,

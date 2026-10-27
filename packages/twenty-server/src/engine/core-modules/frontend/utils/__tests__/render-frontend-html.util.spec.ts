@@ -1,4 +1,3 @@
-import { type ClientConfig } from 'src/engine/core-modules/client-config/client-config.entity';
 import { renderFrontendHtml } from 'src/engine/core-modules/frontend/utils/render-frontend-html.util';
 
 const TEMPLATE =
@@ -13,9 +12,17 @@ const getBootstrapContent = (html: string, elementId: string) =>
 
 describe('renderFrontendHtml', () => {
   it('embeds the iframe media permissions used for the document policy', () => {
-    const html = renderFrontendHtml(TEMPLATE, {} as ClientConfig, [
-      { origin: 'https://phone.example.com', microphone: true, camera: false },
-    ]);
+    const html = renderFrontendHtml({
+      template: TEMPLATE,
+      clientConfig: {},
+      iframeMediaPermissions: [
+        {
+          origin: 'https://phone.example.com',
+          microphone: true,
+          camera: false,
+        },
+      ],
+    });
 
     expect(
       JSON.parse(
@@ -30,13 +37,17 @@ describe('renderFrontendHtml', () => {
   });
 
   it('escapes markup characters in embedded values', () => {
-    const html = renderFrontendHtml(TEMPLATE, {} as ClientConfig, [
-      {
-        origin: '</script><script>alert(1)</script>',
-        microphone: true,
-        camera: true,
-      },
-    ]);
+    const html = renderFrontendHtml({
+      template: TEMPLATE,
+      clientConfig: {},
+      iframeMediaPermissions: [
+        {
+          origin: '</script><script>alert(1)</script>',
+          microphone: true,
+          camera: true,
+        },
+      ],
+    });
 
     expect(html).not.toContain('<script>alert(1)</script>');
     expect(
