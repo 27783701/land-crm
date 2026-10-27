@@ -6,7 +6,7 @@ import { Button, Switch } from 'twenty-ui/primitives/input';
 import { Text } from 'twenty-ui/primitives/typography';
 import { themeCssVariables } from 'twenty-ui/theme';
 
-import { useSaveIframeMediaPermission } from '@/settings/security/hooks/useSaveIframeMediaPermission';
+import { useSettingsSecurityIframeMediaPermissionsOrThrow } from '@/settings/security/contexts/SettingsSecurityIframeMediaPermissionsContext';
 
 type SettingsSecurityIframeMediaPermissionRowProps = {
   permission: IframeMediaPermission;
@@ -37,7 +37,7 @@ export const SettingsSecurityIframeMediaPermissionRow = ({
   disabled,
 }: SettingsSecurityIframeMediaPermissionRowProps) => {
   const { t } = useLingui();
-  const { savePermission } = useSaveIframeMediaPermission();
+  const { savePermission } = useSettingsSecurityIframeMediaPermissionsOrThrow();
   const { origin, microphone, camera } = permission;
 
   return (

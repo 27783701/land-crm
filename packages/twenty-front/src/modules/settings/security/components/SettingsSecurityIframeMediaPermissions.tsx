@@ -13,7 +13,7 @@ import { themeCssVariables } from 'twenty-ui/theme';
 import { getToastOptionsFromError } from '@/error-handler/utils/getToastOptionsFromError';
 import { SettingsSecurityIframeMediaPermissionForm } from '@/settings/security/components/SettingsSecurityIframeMediaPermissionForm';
 import { SettingsSecurityIframeMediaPermissionRow } from '@/settings/security/components/SettingsSecurityIframeMediaPermissionRow';
-import { SettingsSecurityIframeMediaPermissionsContext } from '@/settings/security/contexts/SettingsSecurityIframeMediaPermissionsContext';
+import { SettingsSecurityIframeMediaPermissionsProvider } from '@/settings/security/contexts/SettingsSecurityIframeMediaPermissionsContext';
 import {
   GetWorkspaceIframeMediaPermissionsDocument,
   UpdateWorkspaceIframeMediaPermissionsDocument,
@@ -82,7 +82,7 @@ export const SettingsSecurityIframeMediaPermissions = () => {
             <Button onClick={() => void refetch()}>{t`Retry`}</Button>
           </>
         )}
-        <SettingsSecurityIframeMediaPermissionsContext.Provider
+        <SettingsSecurityIframeMediaPermissionsProvider
           value={{ savePermission }}
         >
           {permissions.map((permission) => (
@@ -96,7 +96,7 @@ export const SettingsSecurityIframeMediaPermissions = () => {
             disabled={isDisabled}
             permissions={permissions}
           />
-        </SettingsSecurityIframeMediaPermissionsContext.Provider>
+        </SettingsSecurityIframeMediaPermissionsProvider>
         {hasSavedChanges && (
           <>
             <Text role="status">{t`Changes saved. Reload open Twenty tabs to apply the updated permissions. Reloading ends active calls and recordings.`}</Text>

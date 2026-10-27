@@ -1,6 +1,13 @@
-import { createContext } from 'react';
 import { type IframeMediaPermission } from 'twenty-shared/types';
+import { createRequiredContext } from '~/utils/createRequiredContext';
 
-export const SettingsSecurityIframeMediaPermissionsContext = createContext<{
+type SettingsSecurityIframeMediaPermissionsContextType = {
   savePermission: (permission: IframeMediaPermission) => Promise<boolean>;
-} | null>(null);
+};
+
+export const [
+  SettingsSecurityIframeMediaPermissionsProvider,
+  useSettingsSecurityIframeMediaPermissionsOrThrow,
+] = createRequiredContext<SettingsSecurityIframeMediaPermissionsContextType>(
+  'SettingsSecurityIframeMediaPermissions',
+);
