@@ -87,7 +87,11 @@ export class McpServerService {
         'Multiple validation errors occurred while creating MCP server',
     });
 
-    return this.syncTools(flatMcpServerToCreate.id, workspaceId, userWorkspaceId);
+    return this.syncTools(
+      flatMcpServerToCreate.id,
+      workspaceId,
+      userWorkspaceId,
+    );
   }
 
   async update(

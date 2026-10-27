@@ -36,7 +36,6 @@ import { RefreshTokensManagerModule } from 'src/modules/connected-account/refres
     McpServerToolSyncService,
     McpServerResolver,
   ],
-  providers: [McpServerService, McpServerResolver],
   exports: [McpServerService],
 })
 export class McpServerModule {}

@@ -66,7 +66,11 @@ export class McpServerResolver {
     @AuthUserWorkspaceId({ allowUndefined: true })
     userWorkspaceId: string | undefined,
   ): Promise<McpServerDTO> {
-    return await this.mcpServerService.create(input, workspace.id, userWorkspaceId);
+    return await this.mcpServerService.create(
+      input,
+      workspace.id,
+      userWorkspaceId,
+    );
   }
 
   @Mutation(() => McpServerDTO)
@@ -76,7 +80,11 @@ export class McpServerResolver {
     @AuthUserWorkspaceId({ allowUndefined: true })
     userWorkspaceId: string | undefined,
   ): Promise<McpServerDTO> {
-    return await this.mcpServerService.update(input, workspace.id, userWorkspaceId);
+    return await this.mcpServerService.update(
+      input,
+      workspace.id,
+      userWorkspaceId,
+    );
   }
 
   @Mutation(() => McpServerDTO)
@@ -86,7 +94,11 @@ export class McpServerResolver {
     @AuthUserWorkspaceId({ allowUndefined: true })
     userWorkspaceId: string | undefined,
   ): Promise<McpServerDTO> {
-    return await this.mcpServerService.syncTools(id, workspace.id, userWorkspaceId);
+    return await this.mcpServerService.syncTools(
+      id,
+      workspace.id,
+      userWorkspaceId,
+    );
   }
 
   @Mutation(() => McpServerDTO)
