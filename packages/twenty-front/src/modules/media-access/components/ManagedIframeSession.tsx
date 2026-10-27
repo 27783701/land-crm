@@ -1,6 +1,5 @@
 import { ManagedIframeEnableButton } from '@/media-access/components/ManagedIframeEnableButton';
 import { ManagedIframeMediaAccessSessionEffect } from '@/media-access/components/ManagedIframeMediaAccessSessionEffect';
-import { ManagedIframeRevokedActivationEffect } from '@/media-access/components/ManagedIframeRevokedActivationEffect';
 import { type ManagedIframeElementProps } from '@/media-access/types/ManagedIframeElementProps';
 import { type RequestMediaCapabilityApproval } from '@/media-access/types/RequestMediaCapabilityApproval';
 import { getIframeMediaPermissionMediaTypes } from '@/media-access/utils/getIframeMediaPermissionMediaTypes';
@@ -78,6 +77,11 @@ export const ManagedIframeSession = ({
       ? activatedPermission
       : null;
   const isActivated = isDefined(delegatedPermission);
+
+  if (isDefined(activatedPermission) && !isActivated) {
+    setActivatedPermission(null);
+  }
+
   const enablePermission = isDefined(requestCapabilityApproval)
     ? permission
     : grantedPermission;
@@ -144,9 +148,6 @@ export const ManagedIframeSession = ({
           permission={delegatedPermission}
           onStop={handleDeactivate}
         />
-      )}
-      {isDefined(activatedPermission) && !isActivated && (
-        <ManagedIframeRevokedActivationEffect onRevoked={handleDeactivate} />
       )}
       <Fragment key={isActivated ? 'media-enabled' : 'media-disabled'}>
         {isDefined(renderIframe) ? (
