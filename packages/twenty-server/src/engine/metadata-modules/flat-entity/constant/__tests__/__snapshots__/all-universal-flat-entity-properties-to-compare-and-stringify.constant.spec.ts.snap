@@ -42,7 +42,6 @@ exports[`ALL_UNIVERSAL_FLAT_ENTITY_PROPERTIES_TO_COMPARE_AND_STRINGIFY should ma
       "key",
       "description",
       "label",
-      "isSecret",
       "isDeprecated",
       "isRequired",
       "type",
@@ -191,7 +190,7 @@ exports[`ALL_UNIVERSAL_FLAT_ENTITY_PROPERTIES_TO_COMPARE_AND_STRINGIFY should ma
       "name",
       "label",
       "url",
-      "connectedAccountId",
+      "connectionProviderUniversalIdentifier",
       "isActive",
     ],
     "propertiesToStringify": [],
@@ -234,6 +233,7 @@ exports[`ALL_UNIVERSAL_FLAT_ENTITY_PROPERTIES_TO_COMPARE_AND_STRINGIFY should ma
     "propertiesToStringify": [
       "overrides",
       "readabilityParentFieldUniversalIdentifiers",
+      "duplicateCriteria",
     ],
   },
   "objectPermission": {
@@ -287,6 +287,7 @@ exports[`ALL_UNIVERSAL_FLAT_ENTITY_PROPERTIES_TO_COMPARE_AND_STRINGIFY should ma
       "universalOverrides",
     ],
     "propertiesToStringify": [
+      "gridPosition",
       "position",
       "universalConfiguration",
       "conditionalDisplay",

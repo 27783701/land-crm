@@ -4,12 +4,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ApplicationModule } from 'src/engine/core-modules/application/application.module';
 import { FeatureFlagModule } from 'src/engine/core-modules/feature-flag/feature-flag.module';
 import { SecureHttpClientModule } from 'src/engine/core-modules/secure-http-client/secure-http-client.module';
-import { ConnectedAccountMetadataModule } from 'src/engine/metadata-modules/connected-account/connected-account-metadata.module';
 import { ConnectedAccountEntity } from 'src/engine/metadata-modules/connected-account/entities/connected-account.entity';
 import { ConnectedAccountTokenEncryptionModule } from 'src/engine/metadata-modules/connected-account/services/connected-account-token-encryption.module';
 import { WorkspaceManyOrAllFlatEntityMapsCacheModule } from 'src/engine/metadata-modules/flat-entity/services/workspace-many-or-all-flat-entity-maps-cache.module';
 import { McpServerEntity } from 'src/engine/metadata-modules/mcp-server/entities/mcp-server.entity';
-import { McpServerConnectedAccountListener } from 'src/engine/metadata-modules/mcp-server/listeners/mcp-server-connected-account.listener';
 import { McpServerResolver } from 'src/engine/metadata-modules/mcp-server/mcp-server.resolver';
 import { McpServerClientService } from 'src/engine/metadata-modules/mcp-server/services/mcp-server-client.service';
 import { McpServerToolSyncService } from 'src/engine/metadata-modules/mcp-server/services/mcp-server-tool-sync.service';
@@ -26,7 +24,6 @@ import { RefreshTokensManagerModule } from 'src/modules/connected-account/refres
     ApplicationModule,
     PermissionsModule,
     FeatureFlagModule,
-    ConnectedAccountMetadataModule,
     ConnectedAccountTokenEncryptionModule,
     RefreshTokensManagerModule,
     SecureHttpClientModule,
@@ -38,8 +35,8 @@ import { RefreshTokensManagerModule } from 'src/modules/connected-account/refres
     McpServerClientService,
     McpServerToolSyncService,
     McpServerResolver,
-    McpServerConnectedAccountListener,
   ],
+  providers: [McpServerService, McpServerResolver],
   exports: [McpServerService],
 })
 export class McpServerModule {}

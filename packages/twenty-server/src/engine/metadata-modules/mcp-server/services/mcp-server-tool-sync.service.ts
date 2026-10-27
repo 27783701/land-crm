@@ -15,8 +15,8 @@ const SYNC_ERROR_MAX_LENGTH = 500;
 
 type McpServerToSync = Pick<
   FlatMcpServer,
-  'id' | 'workspaceId' | 'url' | 'connectedAccountId'
->;
+  'id' | 'workspaceId' | 'url' | 'connectionProviderId'
+> & { userWorkspaceId?: string | null };
 
 @Injectable()
 export class McpServerToolSyncService {

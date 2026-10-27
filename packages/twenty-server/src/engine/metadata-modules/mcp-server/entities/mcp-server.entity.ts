@@ -13,7 +13,7 @@ import {
 import { ADD_TOOLS_TO_MCP_SERVER_UPGRADE_COMMAND_NAME } from 'src/database/commands/upgrade-version-command/2-52/add-tools-to-mcp-server-upgrade-command-name.constant';
 import { ADD_MCP_SERVER_UPGRADE_COMMAND_NAME } from 'src/database/commands/upgrade-version-command/2-52/add-mcp-server-upgrade-command-name.constant';
 import { WasIntroducedInUpgrade } from 'src/engine/core-modules/upgrade/decorators/was-introduced-in-upgrade.decorator';
-import { ConnectedAccountEntity } from 'src/engine/metadata-modules/connected-account/entities/connected-account.entity';
+import { ConnectionProviderEntity } from 'src/engine/core-modules/application/connection-provider/connection-provider.entity';
 import { type McpServerTool } from 'src/engine/metadata-modules/mcp-server/types/mcp-server-tool.type';
 import { SyncableEntity } from 'src/engine/workspace-manager/types/syncable-entity.interface';
 import { type JsonbProperty } from 'src/engine/workspace-manager/workspace-migration/universal-flat-entity/types/jsonb-property.type';
@@ -25,7 +25,7 @@ import { type JsonbProperty } from 'src/engine/workspace-manager/workspace-migra
 @Index('IDX_MCP_SERVER_WORKSPACE_ID_NAME_UNIQUE', ['workspaceId', 'name'], {
   unique: true,
 })
-@Index('IDX_MCP_SERVER_CONNECTED_ACCOUNT_ID', ['connectedAccountId'])
+@Index('IDX_MCP_SERVER_CONNECTION_PROVIDER_ID', ['connectionProviderId'])
 export class McpServerEntity
   extends SyncableEntity
   implements Required<McpServerEntity>
@@ -42,15 +42,15 @@ export class McpServerEntity
   @Column({ nullable: false, type: 'varchar' })
   url: string;
 
-  @ManyToOne(() => ConnectedAccountEntity, {
-    onDelete: 'SET NULL',
+  @ManyToOne(() => ConnectionProviderEntity, {
+    onDelete: 'CASCADE',
     nullable: true,
   })
-  @JoinColumn({ name: 'connectedAccountId' })
-  connectedAccount: Relation<ConnectedAccountEntity> | null;
+  @JoinColumn({ name: 'connectionProviderId' })
+  connectionProvider: Relation<ConnectionProviderEntity> | null;
 
   @Column({ nullable: true, type: 'uuid' })
-  connectedAccountId: string | null;
+  connectionProviderId: string | null;
 
   @Column({ nullable: false, type: 'boolean', default: true })
   isActive: boolean;
