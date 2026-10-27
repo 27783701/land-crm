@@ -8,8 +8,15 @@ import { isDefined } from 'twenty-shared/utils';
 import { FAIR_DISPATCH_SCRIPT } from 'src/engine/core-modules/message-queue/drivers/fairness/fair-dispatch-script.constant';
 import {
   FAIR_CLOCK_TTL_MS,
+  FAIR_REBASE_CHUNK_SIZE,
+  FAIR_REBASE_GRACE_MS,
+  FAIR_REBASE_MAX_CHUNKS,
+  FAIR_REBASE_OLD_SCALE_FLOOR,
+  FAIR_REBASE_STEP,
+  FAIR_REBASE_THRESHOLD,
   FAIR_TICKET_OFFSET,
 } from 'src/engine/core-modules/message-queue/drivers/fairness/fair-priority.constant';
+import { FAIR_REBASE_SCRIPT } from 'src/engine/core-modules/message-queue/drivers/fairness/fair-rebase-script.constant';
 import { FAIR_TAG_SCRIPT } from 'src/engine/core-modules/message-queue/drivers/fairness/fair-tag-script.constant';
 import { type MessageQueue } from 'src/engine/core-modules/message-queue/message-queue.constants';
 
@@ -19,8 +26,8 @@ export type FairTicket = { tag: number; weight: number };
 
 type FairPriorityTaggerOptions = {
   getClient: (queueName: MessageQueue) => Promise<RedisClient>;
-  getJobKey: (job: { queueName: MessageQueue; jobId: string }) => string;
   keyPrefix: string;
+  rebaseGraceMs?: number;
 };
 
 const scriptShaByScript = new Map<string, string>();
@@ -39,8 +46,14 @@ const getScriptSha = (script: string): string => {
   return sha;
 };
 
+const sleep = (milliseconds: number) =>
+  new Promise<void>((resolve) => {
+    setTimeout(resolve, milliseconds).unref();
+  });
+
 export class FairPriorityTagger {
   private readonly logger = new Logger(FairPriorityTagger.name);
+  private readonly rebasesInProgress = new Map<MessageQueue, Promise<void>>();
 
   constructor(private readonly options: FairPriorityTaggerOptions) {}
 
@@ -63,6 +76,7 @@ export class FairPriorityTagger {
         script: FAIR_TAG_SCRIPT,
         keys: [
           this.buildFairKey({ queueName, suffix: 'vtime' }),
+          this.buildFairKey({ queueName, suffix: 'base' }),
           this.buildFairKey({ queueName, suffix: 'weights' }),
           ...distinctGroupKeys.map((groupKey) =>
             this.buildFairKey({ queueName, suffix: `clock:${groupKey}` }),
@@ -76,15 +90,7 @@ export class FairPriorityTagger {
           ...reservations.flatMap(({ groupKeys, batchSize }) => [
             batchSize,
             groupKeys.length,
-            ...groupKeys.map((groupKey) => {
-              const keyIndex = indexByGroupKey.get(groupKey);
-
-              if (!isDefined(keyIndex)) {
-                throw new Error(`Group key ${groupKey} has no clock`);
-              }
-
-              return keyIndex;
-            }),
+            ...groupKeys.map((groupKey) => indexByGroupKey.get(groupKey) ?? 0),
           ]),
         ],
       });
@@ -111,7 +117,7 @@ export class FairPriorityTagger {
     }
   }
 
-  // The ticket is read inside the script: the worker's copy of the job may be stale
+  // The ticket is read inside the script: a worker's copy of the job can predate a rebase
   async dispatched({
     queueName,
     jobId,
@@ -120,21 +126,108 @@ export class FairPriorityTagger {
     jobId: string;
   }): Promise<void> {
     try {
-      await this.runScript({
-        queueName,
-        script: FAIR_DISPATCH_SCRIPT,
-        keys: [
-          this.buildFairKey({ queueName, suffix: 'vtime' }),
-          this.options.getJobKey({ queueName, jobId }),
-        ],
-        args: [FAIR_TICKET_OFFSET],
-      });
+      const rebaseState = Number(
+        await this.runScript({
+          queueName,
+          script: FAIR_DISPATCH_SCRIPT,
+          keys: [
+            this.buildFairKey({ queueName, suffix: 'vtime' }),
+            this.buildFairKey({ queueName, suffix: 'base' }),
+            this.buildFairKey({ queueName, suffix: 'rebase' }),
+            this.buildQueueKey({ queueName, suffix: 'prioritized' }),
+          ],
+          args: [
+            this.buildQueueKey({ queueName, suffix: jobId }),
+            FAIR_REBASE_THRESHOLD,
+            FAIR_REBASE_STEP,
+            FAIR_TICKET_OFFSET,
+            FAIR_REBASE_OLD_SCALE_FLOOR,
+          ],
+        }),
+      );
+
+      if (rebaseState === 1) {
+        this.logger.log(
+          `Rebasing the fair tickets of queue ${queueName} by ${FAIR_REBASE_STEP}`,
+        );
+      }
+
+      if (rebaseState > 0) {
+        void this.rebase(queueName);
+      }
     } catch (error) {
+      this.warn({ queueName, action: 'record the fair dispatch', error });
+    }
+  }
+
+  // Rewrites the old-scale tickets one bounded chunk at a time, so Redis is never held for a whole backlog
+  rebase(queueName: MessageQueue): Promise<void> {
+    const rebaseInProgress = this.rebasesInProgress.get(queueName);
+
+    if (isDefined(rebaseInProgress)) {
+      return rebaseInProgress;
+    }
+
+    const rebase = this.runRebase(queueName).finally(() => {
+      this.rebasesInProgress.delete(queueName);
+    });
+
+    this.rebasesInProgress.set(queueName, rebase);
+
+    return rebase;
+  }
+
+  private async runRebase(queueName: MessageQueue): Promise<void> {
+    try {
+      for (let chunk = 0; chunk < FAIR_REBASE_MAX_CHUNKS; chunk += 1) {
+        const rawResult = await this.runScript({
+          queueName,
+          script: FAIR_REBASE_SCRIPT,
+          keys: [
+            this.buildFairKey({ queueName, suffix: 'rebase' }),
+            this.buildQueueKey({ queueName, suffix: 'prioritized' }),
+            this.buildQueueKey({ queueName, suffix: 'delayed' }),
+            this.buildQueueKey({ queueName, suffix: 'active' }),
+          ],
+          args: [
+            FAIR_REBASE_STEP,
+            FAIR_TICKET_OFFSET + FAIR_REBASE_OLD_SCALE_FLOOR,
+            FAIR_REBASE_CHUNK_SIZE,
+            this.buildQueueKey({ queueName, suffix: '' }),
+            Date.now(),
+            this.options.rebaseGraceMs ?? FAIR_REBASE_GRACE_MS,
+          ],
+        });
+        const rebaseResult = this.parseRebaseResult(rawResult);
+
+        if (!isDefined(rebaseResult)) {
+          this.warn({
+            queueName,
+            action: 'parse the fair rebase result',
+            error: rawResult,
+          });
+
+          return;
+        }
+
+        const [state, waitMs] = rebaseResult;
+
+        if (state === 0) {
+          return;
+        }
+
+        if (state === 2) {
+          await sleep(waitMs);
+        }
+      }
+
       this.warn({
         queueName,
-        action: `record the fair dispatch of job ${jobId}`,
-        error,
+        action: 'finish the fair rebase',
+        error: `still pending after ${FAIR_REBASE_MAX_CHUNKS} chunks`,
       });
+    } catch (error) {
+      this.warn({ queueName, action: 'rebase the fair tickets', error });
     }
   }
 
@@ -185,6 +278,12 @@ export class FairPriorityTagger {
       ({ tag, weight }) => Number.isFinite(tag) && weight > 0,
     )
       ? tickets
+      : undefined;
+  }
+
+  private parseRebaseResult(rawResult: unknown): [number, number] | undefined {
+    return Array.isArray(rawResult)
+      ? [Number(rawResult[0]), Math.max(0, Number(rawResult[1]))]
       : undefined;
   }
 
