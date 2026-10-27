@@ -221,6 +221,13 @@ export interface AiChatUsage {
     __typename: 'AiChatUsage'
 }
 
+export interface AiChatUserCreditsUsage {
+    consumedValue?: Scalars['BigInt']
+    limitValue: Scalars['BigInt']
+    periodEnd: Scalars['DateTime']
+    __typename: 'AiChatUserCreditsUsage'
+}
+
 export type AiModelTier = 'balanced' | 'extraFast' | 'extraSmart' | 'fast' | 'smart'
 
 export interface AiSystemPromptPreview {
@@ -923,6 +930,7 @@ export interface BillingSubscription {
     cancelAt?: Scalars['DateTime']
     collectionMethod?: BillingSubscriptionCollectionMethod
     currentPeriodEnd?: Scalars['DateTime']
+    hasUserCredits?: Scalars['Boolean']
     id: Scalars['UUID']
     interval?: SubscriptionInterval
     metadata: Scalars['JSON']
@@ -2913,6 +2921,7 @@ export interface Query {
     agentChatOpenThreadsSummary: AgentChatOpenThreadsSummary
     agentRuns: AgentRun[]
     aiChatUsage?: AiChatUsage
+    aiChatUserCreditsUsage?: AiChatUserCreditsUsage
     apiKey?: ApiKey
     apiKeys: ApiKey[]
     appConnection: AppConnection
@@ -4026,6 +4035,7 @@ export interface Workspace {
     isPasswordAuthBypassEnabled: Scalars['Boolean']
     isPasswordAuthEnabled: Scalars['Boolean']
     isPublicInviteLinkEnabled: Scalars['Boolean']
+    isTrialAvailable: Scalars['Boolean']
     isTwoFactorAuthenticationEnforced: Scalars['Boolean']
     logo?: Scalars['String']
     logoFileId?: Scalars['UUID']
@@ -4372,6 +4382,14 @@ export interface AggregateChartConfigurationGenqlSelection{
 export interface AiChatUsageGenqlSelection{
     consumedValue?: boolean | number
     kind?: boolean | number
+    limitValue?: boolean | number
+    periodEnd?: boolean | number
+    __typename?: boolean | number
+    __scalar?: boolean | number
+}
+
+export interface AiChatUserCreditsUsageGenqlSelection{
+    consumedValue?: boolean | number
     limitValue?: boolean | number
     periodEnd?: boolean | number
     __typename?: boolean | number
@@ -5124,6 +5142,7 @@ export interface BillingSubscriptionGenqlSelection{
     cancelAt?: boolean | number
     collectionMethod?: boolean | number
     currentPeriodEnd?: boolean | number
+    hasUserCredits?: boolean | number
     id?: boolean | number
     interval?: boolean | number
     metadata?: boolean | number
@@ -7380,6 +7399,7 @@ export interface QueryGenqlSelection{
     agentChatOpenThreadsSummary?: AgentChatOpenThreadsSummaryGenqlSelection
     agentRuns?: (AgentRunGenqlSelection & { __args: {agentId: Scalars['UUID'], limit: Scalars['Int']} })
     aiChatUsage?: AiChatUsageGenqlSelection
+    aiChatUserCreditsUsage?: AiChatUserCreditsUsageGenqlSelection
     apiKey?: (ApiKeyGenqlSelection & { __args: {input: GetApiKeyInput} })
     apiKeys?: ApiKeyGenqlSelection
     appConnection?: (AppConnectionGenqlSelection & { __args: {id: Scalars['ID']} })
@@ -8852,6 +8872,7 @@ export interface WorkspaceGenqlSelection{
     isPasswordAuthBypassEnabled?: boolean | number
     isPasswordAuthEnabled?: boolean | number
     isPublicInviteLinkEnabled?: boolean | number
+    isTrialAvailable?: boolean | number
     isTwoFactorAuthenticationEnforced?: boolean | number
     logo?: boolean | number
     logoFileId?: boolean | number
@@ -9089,6 +9110,14 @@ export interface WorkspaceUrlsAndIdGenqlSelection{
     export const isAiChatUsage = (obj?: { __typename?: any } | null): obj is AiChatUsage => {
       if (!obj?.__typename) throw new Error('__typename is missing in "isAiChatUsage"')
       return AiChatUsage_possibleTypes.includes(obj.__typename)
+    }
+    
+
+
+    const AiChatUserCreditsUsage_possibleTypes: string[] = ['AiChatUserCreditsUsage']
+    export const isAiChatUserCreditsUsage = (obj?: { __typename?: any } | null): obj is AiChatUserCreditsUsage => {
+      if (!obj?.__typename) throw new Error('__typename is missing in "isAiChatUserCreditsUsage"')
+      return AiChatUserCreditsUsage_possibleTypes.includes(obj.__typename)
     }
     
 
