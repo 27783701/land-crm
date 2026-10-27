@@ -3,7 +3,13 @@ import { renderFrontendHtml } from 'src/engine/core-modules/frontend/utils/rende
 const TEMPLATE =
   '<html><head><!-- BEGIN: Twenty Config --><script>window._env_ = { stale: true };</script><!-- END: Twenty Config --></head><body></body></html>';
 
-const getBootstrapContent = (html: string, elementId: string) =>
+const getBootstrapContent = ({
+  html,
+  elementId,
+}: {
+  html: string;
+  elementId: string;
+}) =>
   html.match(
     new RegExp(
       `<script id="${elementId}" type="application/json">(.*?)</script>`,
@@ -26,7 +32,10 @@ describe('renderFrontendHtml', () => {
 
     expect(
       JSON.parse(
-        getBootstrapContent(html, 'twenty-iframe-media-permissions') ?? '',
+        getBootstrapContent({
+          html,
+          elementId: 'twenty-iframe-media-permissions',
+        }) ?? '',
       ),
     ).toEqual([
       { origin: 'https://phone.example.com', microphone: true, camera: false },
@@ -51,7 +60,10 @@ describe('renderFrontendHtml', () => {
 
     expect(html).not.toContain('<script>alert(1)</script>');
     expect(
-      getBootstrapContent(html, 'twenty-iframe-media-permissions'),
+      getBootstrapContent({
+        html,
+        elementId: 'twenty-iframe-media-permissions',
+      }),
     ).toContain('\\u003c/script\\u003e');
   });
 });
