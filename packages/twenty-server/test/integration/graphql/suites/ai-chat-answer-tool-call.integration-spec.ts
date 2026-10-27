@@ -425,13 +425,13 @@ describe('Answering a chat tool call', () => {
       participantService.resolveMention.bind(participantService);
     const responseWrite = jest
       .spyOn(participantService, 'resolveMention')
-      .mockImplementationOnce((args) =>
+      .mockImplementationOnce((resolveMentionArgs) =>
         resolveMention({
-          ...args,
+          ...resolveMentionArgs,
           writeResponse: async (
             context: Parameters<AgentChatThreadWriteStep>[0],
           ) => {
-            await args.writeResponse(context);
+            await resolveMentionArgs.writeResponse(context);
 
             throw new Error('Response transaction could not commit');
           },
@@ -460,10 +460,10 @@ describe('Answering a chat tool call', () => {
     const addMessage = chat.addMessage.bind(chat);
     const authoredResponse = jest
       .spyOn(chat, 'addMessage')
-      .mockImplementationOnce(async (args) => {
+      .mockImplementationOnce(async (addMessageArgs) => {
         await markAsMentioned();
 
-        return addMessage(args);
+        return addMessage(addMessageArgs);
       });
 
     try {
