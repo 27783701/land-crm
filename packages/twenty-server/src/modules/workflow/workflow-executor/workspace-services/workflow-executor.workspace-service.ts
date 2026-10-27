@@ -31,13 +31,11 @@ import { shouldCaptureException } from 'src/engine/utils/global-exception-handle
 import { WorkflowRunStatus } from 'src/modules/workflow/common/standard-objects/workflow-run.workspace-entity';
 import { workflowHasRunningSteps } from 'src/modules/workflow/common/utils/workflow-has-running-steps.util';
 import { WorkflowActionFactory } from 'src/modules/workflow/workflow-executor/factories/workflow-action.factory';
-import { WorkflowExecutionContextService } from 'src/modules/workflow/workflow-executor/services/workflow-execution-context.service';
 import { type WorkflowActionOutput } from 'src/modules/workflow/workflow-executor/types/workflow-action-output.type';
 import {
   type WorkflowBranchExecutorInput,
   type WorkflowExecutorInput,
 } from 'src/modules/workflow/workflow-executor/types/workflow-executor-input.type';
-import { assertStepTypeAvailableToApplicationRun } from 'src/modules/workflow/workflow-executor/utils/assert-step-type-available-to-application-run.util';
 import { getStepRetryDelayMs } from 'src/modules/workflow/workflow-executor/utils/get-step-retry-delay-ms.util';
 import { isUserFacingWorkflowExecutorError } from 'src/modules/workflow/workflow-executor/utils/is-user-facing-workflow-executor-error.util';
 import { stepHasRetryAttemptsLeft } from 'src/modules/workflow/workflow-executor/utils/step-has-retry-attempts-left.util';
@@ -53,6 +51,7 @@ import { isWorkflowIteratorAction } from 'src/modules/workflow/workflow-executor
 import { findEnclosingIteratorWithContinueOnFailure } from 'src/modules/workflow/workflow-executor/workflow-actions/iterator/utils/find-enclosing-iterator-with-continue-on-failure.util';
 import { getNextStepIdsForIterator } from 'src/modules/workflow/workflow-executor/workflow-actions/iterator/utils/get-next-step-ids-for-iterator.util';
 import { WorkflowAction } from 'src/modules/workflow/workflow-executor/workflow-actions/types/workflow-action.type';
+import { ApplicationWorkflowStepPermissionService } from 'src/modules/workflow/workflow-executor/services/application-workflow-step-permission.service';
 import { RUN_WORKFLOW_JOB_NAME } from 'src/modules/workflow/workflow-runner/constants/run-workflow-job-name';
 import { type RunWorkflowJobData } from 'src/modules/workflow/workflow-runner/types/run-workflow-job-data.type';
 import { buildRunWorkflowJobOptions } from 'src/modules/workflow/workflow-runner/utils/build-run-workflow-job-options.util';
@@ -71,7 +70,6 @@ export class WorkflowExecutorWorkspaceService {
   constructor(
     private readonly workflowCoreSyncService: WorkflowCoreSyncService,
     private readonly workflowActionFactory: WorkflowActionFactory,
-    private readonly workflowExecutionContextService: WorkflowExecutionContextService,
     private readonly workflowRunWorkspaceService: WorkflowRunWorkspaceService,
     private readonly usageQuotaAdmissionService: UsageQuotaAdmissionService,
     private readonly usageLimitQuotaService: UsageLimitQuotaService,
@@ -81,6 +79,7 @@ export class WorkflowExecutorWorkspaceService {
     private readonly workflowStepWaitWorkspaceService: WorkflowStepWaitWorkspaceService,
     @InjectMessageQueue(MessageQueue.workflowQueue)
     private readonly messageQueueService: MessageQueueService,
+    private readonly applicationWorkflowStepPermissionService: ApplicationWorkflowStepPermissionService,
   ) {}
 
   async executeFromSteps({
@@ -603,15 +602,13 @@ export class WorkflowExecutorWorkspaceService {
     try {
       await this.assertActionTypeEnabled({ type: step.type, workspaceId });
 
-      const isInstalledApplicationRun =
-        await this.workflowExecutionContextService.isRunBoundToInstalledApplication(
-          { runApplicationId, workspaceId },
-        );
-
-      assertStepTypeAvailableToApplicationRun({
-        stepType: step.type,
-        isInstalledApplicationRun,
-      });
+      await this.applicationWorkflowStepPermissionService.assertRunApplicationMayUseStepOrThrow(
+        {
+          workspaceId,
+          runApplicationId,
+          stepType: step.type,
+        },
+      );
 
       const nodeRunRefusal = await this.getNodeRunRefusal({
         workspaceId,
