@@ -147,7 +147,10 @@ describe('Iframe media security permissions', () => {
       },
     });
 
-    expect(response.body.errors).toBeDefined();
+    expect(response.body.errors[0].extensions).toMatchObject({
+      code: ErrorCode.BAD_USER_INPUT,
+      userFriendlyMessage: 'Enter an HTTPS origin without a path or wildcard',
+    });
     expect(await readPermissions()).toEqual([]);
   });
 

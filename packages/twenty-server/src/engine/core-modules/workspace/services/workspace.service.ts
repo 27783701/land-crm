@@ -57,6 +57,7 @@ import {
   FileWorkspaceFolderDeletionJob,
   type FileWorkspaceFolderDeletionJobData,
 } from 'src/engine/core-modules/file/jobs/file-workspace-folder-deletion.job';
+import { UserInputError } from 'src/engine/core-modules/graphql/utils/graphql-errors.util';
 import { LOGIC_FUNCTION_QUEUE_RETRY_BACKOFF } from 'src/engine/core-modules/logic-function/logic-function-trigger/constants/logic-function-queue-retry-backoff.constant';
 import { InjectMessageQueue } from 'src/engine/core-modules/message-queue/decorators/message-queue.decorator';
 import { MessageQueue } from 'src/engine/core-modules/message-queue/message-queue.constants';
@@ -336,7 +337,11 @@ export class WorkspaceService {
   }): Promise<WorkspaceEntity> {
     const origin = normalizeIframeMediaPermissionOrigin(input.origin);
 
-    assertIsDefinedOrThrow(origin);
+    if (!isDefined(origin)) {
+      throw new UserInputError('Invalid iframe media permission origin', {
+        userFriendlyMessage: msg`Enter an HTTPS origin without a path or wildcard`,
+      });
+    }
 
     const updatedWorkspace = await this.workspaceRepository.manager.transaction(
       async (manager) => {
