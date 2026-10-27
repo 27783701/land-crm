@@ -46,11 +46,18 @@ export const MediaAccessIndicator = () => {
   const hasPendingRequest = mediaAccessSessions.some(
     (session) => session.status === 'pending',
   );
-  const title = isCapturing
-    ? t`Microphone or camera in use`
-    : hasPendingRequest
-      ? t`Media access requests`
-      : t`Media access enabled`;
+  const getTitle = () => {
+    if (isCapturing) {
+      return t`Microphone or camera in use`;
+    }
+
+    if (hasPendingRequest) {
+      return t`Media access requests`;
+    }
+
+    return t`Media access enabled`;
+  };
+  const title = getTitle();
   const sessionsByOwner = groupBy(mediaAccessSessions, (session) =>
     session.status === 'delegated'
       ? `${session.ownerId}:delegated:${session.origin}`

@@ -1,4 +1,4 @@
-import { type ManagedIframeProps } from '@/media-access/types/ManagedIframeProps';
+import { type ManagedIframeElementProps } from '@/media-access/types/ManagedIframeElementProps';
 import { isString } from '@sniptt/guards';
 import { type CSSProperties } from 'react';
 
@@ -15,7 +15,10 @@ export const getManagedIframeContainerStyle = ({
   style,
   width,
   height,
-}: Pick<ManagedIframeProps, 'style' | 'width' | 'height'>): CSSProperties => ({
+}: Pick<
+  ManagedIframeElementProps,
+  'style' | 'width' | 'height'
+>): CSSProperties => ({
   width: normalizeDimension(style?.width ?? width ?? '100%'),
   height: normalizeDimension(style?.height ?? height ?? '100%'),
   display: style?.display === 'none' ? 'none' : undefined,

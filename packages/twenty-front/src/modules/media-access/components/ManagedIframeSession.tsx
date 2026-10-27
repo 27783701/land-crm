@@ -1,6 +1,6 @@
 import { MediaAccessSessionCleanupEffect } from '@/media-access/components/MediaAccessSessionCleanupEffect';
 import { mediaAccessSessionsState } from '@/media-access/states/mediaAccessSessionsState';
-import { type ManagedIframeProps } from '@/media-access/types/ManagedIframeProps';
+import { type ManagedIframeElementProps } from '@/media-access/types/ManagedIframeElementProps';
 import { getManagedIframeContainerStyle } from '@/media-access/utils/getManagedIframeContainerStyle';
 import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 import { styled } from '@linaria/react';
@@ -28,101 +28,139 @@ const StyledControls = styled.div`
   right: ${themeCssVariables.spacing[2]};
 `;
 
-type ManagedIframeSessionProps = {
-  iframeProps: ManagedIframeProps;
-  permission: {
-    origin: string;
-    microphone: boolean;
-    camera: boolean;
-  } | null;
+type ManagedIframeSessionProps = ManagedIframeElementProps & {
+  ownerId: string;
+  ownerName: string;
+  mediaOrigin?: string;
+  isMicrophoneAllowed: boolean;
+  isCameraAllowed: boolean;
 };
 
 export const ManagedIframeSession = ({
-  iframeProps,
-  permission,
+  src,
+  srcDoc,
+  title,
+  id,
+  name,
+  className,
+  style,
+  width,
+  height,
+  loading,
+  referrerPolicy,
+  tabIndex,
+  onLoad,
+  onError,
+  onClick,
+  onFocus,
+  onBlur,
+  sandbox,
+  allow,
+  allowFullScreen,
+  iframeRef,
+  ownerId,
+  ownerName,
+  mediaOrigin,
+  isMicrophoneAllowed,
+  isCameraAllowed,
 }: ManagedIframeSessionProps) => {
-  const id = useId();
+  const mediaAccessSessionId = useId();
   const [isActivated, setIsActivated] = useState(false);
   const setMediaAccessSessions = useSetAtomState(mediaAccessSessionsState);
   const canEnableMedia =
-    isDefined(permission) && (permission.microphone || permission.camera);
+    isDefined(mediaOrigin) && (isMicrophoneAllowed || isCameraAllowed);
   const handleDisable = () => {
     setIsActivated(false);
     setMediaAccessSessions((sessions) =>
-      sessions.filter((session) => session.id !== id),
+      sessions.filter((session) => session.id !== mediaAccessSessionId),
     );
   };
   const handleEnable = () => {
-    if (!isDefined(permission) || !canEnableMedia) {
+    if (!isDefined(mediaOrigin) || !canEnableMedia) {
       return;
     }
 
     setMediaAccessSessions((sessions) => [
-      ...sessions.filter((session) => session.id !== id),
+      ...sessions.filter((session) => session.id !== mediaAccessSessionId),
       {
-        id,
-        ownerId: `${iframeProps.owner.type}:${iframeProps.owner.id}`,
-        ownerName: iframeProps.owner.name,
+        id: mediaAccessSessionId,
+        ownerId,
+        ownerName,
         status: 'delegated',
-        origin: permission.origin,
+        origin: mediaOrigin,
         mediaTypes: [
-          ...(permission.microphone ? (['audio'] as const) : []),
-          ...(permission.camera ? (['video'] as const) : []),
+          ...(isMicrophoneAllowed ? (['audio'] as const) : []),
+          ...(isCameraAllowed ? (['video'] as const) : []),
         ],
         onStop: handleDisable,
       },
     ]);
     setIsActivated(true);
   };
-  const allow = getIframeMediaAllow({
-    allow: iframeProps.allow,
-    permission: isActivated ? permission : null,
+  const iframeAllow = getIframeMediaAllow({
+    allow,
+    permission:
+      isActivated && isDefined(mediaOrigin)
+        ? {
+            origin: mediaOrigin,
+            microphone: isMicrophoneAllowed,
+            camera: isCameraAllowed,
+          }
+        : null,
   });
-  const sandbox = isActivated
+  const iframeSandbox = isActivated
     ? [
         ...new Set([
-          ...(iframeProps.sandbox ?? '').split(/\s+/).filter(isNonEmptyString),
+          ...(sandbox ?? '').split(/\s+/).filter(isNonEmptyString),
           'allow-same-origin',
         ]),
       ].join(' ')
-    : iframeProps.sandbox;
-  const mediaLabel = permission?.camera
-    ? permission.microphone
-      ? t`Enable microphone and camera`
-      : t`Enable camera`
-    : t`Enable microphone`;
+    : sandbox;
+  const getMediaLabel = () => {
+    if (isMicrophoneAllowed && isCameraAllowed) {
+      return t`Enable microphone and camera`;
+    }
+
+    if (isCameraAllowed) {
+      return t`Enable camera`;
+    }
+
+    return t`Enable microphone`;
+  };
 
   return (
-    <StyledContainer style={getManagedIframeContainerStyle(iframeProps)}>
-      <MediaAccessSessionCleanupEffect id={id} />
+    <StyledContainer
+      style={getManagedIframeContainerStyle({ style, width, height })}
+    >
+      <MediaAccessSessionCleanupEffect id={mediaAccessSessionId} />
       <iframe
         key={isActivated ? 'media-enabled' : 'media-disabled'}
-        ref={iframeProps.iframeRef}
-        src={iframeProps.src}
-        srcDoc={iframeProps.srcDoc}
-        title={iframeProps.title}
-        id={iframeProps.id}
-        name={iframeProps.name}
-        className={iframeProps.className}
-        style={{ ...iframeProps.style, width: '100%', height: '100%' }}
-        width={iframeProps.width}
-        height={iframeProps.height}
-        loading={iframeProps.loading}
-        referrerPolicy={iframeProps.referrerPolicy}
-        tabIndex={iframeProps.tabIndex}
-        onLoad={iframeProps.onLoad}
-        onError={iframeProps.onError}
-        onClick={iframeProps.onClick}
-        onFocus={iframeProps.onFocus}
-        onBlur={iframeProps.onBlur}
-        sandbox={sandbox}
-        allow={allow}
-        allowFullScreen={iframeProps.allowFullScreen}
+        ref={iframeRef}
+        src={src}
+        srcDoc={srcDoc}
+        title={title}
+        id={id}
+        name={name}
+        className={className}
+        style={{ ...style, width: '100%', height: '100%' }}
+        width={width}
+        height={height}
+        loading={loading}
+        referrerPolicy={referrerPolicy}
+        tabIndex={tabIndex}
+        onLoad={onLoad}
+        onError={onError}
+        onClick={onClick}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        sandbox={iframeSandbox}
+        allow={iframeAllow}
+        allowFullScreen={allowFullScreen}
       />
       {canEnableMedia && !isActivated && (
         <StyledControls>
           <Button size="sm" variant="outline" onClick={handleEnable}>
-            {mediaLabel}
+            {getMediaLabel()}
           </Button>
         </StyledControls>
       )}

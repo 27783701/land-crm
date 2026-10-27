@@ -72,11 +72,27 @@ export const MediaAccessSessionRow = ({
       session.onStop();
     }
   };
-  const actionLabel = isDelegated
-    ? t`Disable media access for ${ownerName}`
-    : isCapturing
-      ? t`Stop capture for ${ownerName}`
-      : t`Cancel media request for ${ownerName}`;
+  const getActionLabels = () => {
+    if (isDelegated) {
+      return {
+        actionLabel: t`Disable`,
+        actionAriaLabel: t`Disable media access for ${ownerName}`,
+      };
+    }
+
+    if (isCapturing) {
+      return {
+        actionLabel: t`Stop`,
+        actionAriaLabel: t`Stop capture for ${ownerName}`,
+      };
+    }
+
+    return {
+      actionLabel: t`Cancel`,
+      actionAriaLabel: t`Cancel media request for ${ownerName}`,
+    };
+  };
+  const { actionLabel, actionAriaLabel } = getActionLabels();
 
   return (
     <StyledRow role="listitem">
@@ -93,10 +109,10 @@ export const MediaAccessSessionRow = ({
       <Button
         size="sm"
         variant="ghost"
-        aria-label={actionLabel}
+        aria-label={actionAriaLabel}
         onClick={handleStop}
       >
-        {isDelegated ? t`Disable` : isCapturing ? t`Stop` : t`Cancel`}
+        {actionLabel}
       </Button>
     </StyledRow>
   );
