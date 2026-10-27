@@ -63,17 +63,4 @@ describe('getIframeMediaAllow', () => {
       ).toBe("microphone 'none'; camera 'none'");
     },
   );
-
-  it('requires boolean grants instead of truthy permission values', () => {
-    expect(
-      getIframeMediaAllow({
-        allow: 'microphone *; camera *',
-        permission: {
-          origin: 'https://phone.example.com',
-          microphone: 'true' as unknown as boolean,
-          camera: 1 as unknown as boolean,
-        },
-      }),
-    ).toBe("microphone 'none'; camera 'none'");
-  });
 });

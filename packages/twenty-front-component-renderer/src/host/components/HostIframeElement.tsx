@@ -8,6 +8,7 @@ import {
 import { FrontComponentIframeHostContext } from '@/host/elements/contexts/FrontComponentIframeHostContext';
 import { useHtmlHostElementProps } from '@/host/elements/hooks/useHtmlHostElementProps';
 import { createPlainHostElement } from '@/host/elements/utils/createPlainHostElement';
+import { getIframeHostReactProps } from '@/host/elements/utils/getIframeHostReactProps';
 import { getRequestedIframeMediaCapabilities } from '@/host/elements/utils/getRequestedIframeMediaCapabilities';
 
 type HostIframeElementProps = Record<string, unknown>;
@@ -25,7 +26,10 @@ export const HostIframeElement = (props: HostIframeElementProps) => {
   ) {
     return (
       <IframeHost
-        iframeProps={{ ...reactBindableProps, ...hostEnforcedProps }}
+        iframeProps={getIframeHostReactProps({
+          ...reactBindableProps,
+          ...hostEnforcedProps,
+        })}
         iframeRef={composedElementRef}
       />
     );

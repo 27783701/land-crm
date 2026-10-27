@@ -1,15 +1,15 @@
 import { ManagedIframe } from '@/media-access/components/ManagedIframe';
+import { useWorkspaceIframeMediaPermissions } from '@/media-access/hooks/useWorkspaceIframeMediaPermissions';
 import { useIsPageLayoutInEditMode } from '@/page-layout/hooks/useIsPageLayoutInEditMode';
 import { type PageLayoutWidget } from '@/page-layout/types/PageLayoutWidget';
 import { PageLayoutWidgetNoDataDisplay } from '@/page-layout/widgets/components/PageLayoutWidgetNoDataDisplay';
 import { WidgetSkeletonLoader } from '@/page-layout/widgets/components/WidgetSkeletonLoader';
-import { useQuery } from '@apollo/client/react';
 import { styled } from '@linaria/react';
 import { useState } from 'react';
+import { MEDIA_CAPABILITIES } from 'twenty-shared/constants';
 import { getSafeUrl, isDefined } from 'twenty-shared/utils';
 import { doNotTranslate } from 'twenty-shared/i18n';
 import { themeCssVariables } from 'twenty-ui/theme';
-import { GetWorkspaceIframeMediaPermissionsDocument } from '~/generated-metadata/graphql';
 
 const StyledContainer = styled.div<{ $isEditMode: boolean }>`
   background: ${themeCssVariables.background.primary};
@@ -61,12 +61,7 @@ type IframeWidgetProps = {
 
 export const IframeWidget = ({ widget }: IframeWidgetProps) => {
   const isPageLayoutInEditMode = useIsPageLayoutInEditMode();
-  const { data, error: mediaPolicyError } = useQuery(
-    GetWorkspaceIframeMediaPermissionsDocument,
-    {
-      fetchPolicy: 'cache-and-network',
-    },
-  );
+  const iframeMediaPermissions = useWorkspaceIframeMediaPermissions();
 
   const configuration = widget.configuration;
 
@@ -115,12 +110,8 @@ export const IframeWidget = ({ widget }: IframeWidgetProps) => {
         $isEditMode={isPageLayoutInEditMode}
         iframeId={widget.id}
         owner={{ type: 'workspace-widget', id: widget.id, name: title }}
-        iframeMediaPermissions={
-          isDefined(mediaPolicyError)
-            ? []
-            : (data?.currentWorkspace.iframeMediaPermissions ?? [])
-        }
-        requestedMediaCapabilities={['microphone', 'camera']}
+        iframeMediaPermissions={iframeMediaPermissions}
+        requestedMediaCapabilities={MEDIA_CAPABILITIES}
         src={safeUrl}
         title={title}
         onLoad={handleIframeLoad}

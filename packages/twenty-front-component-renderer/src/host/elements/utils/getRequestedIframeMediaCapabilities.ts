@@ -1,7 +1,6 @@
 import { isNonEmptyString, isString } from '@sniptt/guards';
+import { MEDIA_CAPABILITIES } from 'twenty-shared/constants';
 import { isDefined } from 'twenty-shared/utils';
-
-const MEDIA_CAPABILITIES = ['microphone', 'camera'] as const;
 
 export const getRequestedIframeMediaCapabilities = (allow: unknown) => {
   if (!isString(allow)) {

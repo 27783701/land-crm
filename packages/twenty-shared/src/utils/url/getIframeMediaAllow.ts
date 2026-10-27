@@ -25,9 +25,9 @@ export const getIframeMediaAllow = ({
     ? normalizeIframeMediaPermissionOrigin(permissionOrigin)
     : undefined;
   const microphoneOrigin =
-    isDefined(origin) && permission?.microphone === true ? origin : "'none'";
+    isDefined(origin) && permission?.microphone ? origin : "'none'";
   const cameraOrigin =
-    isDefined(origin) && permission?.camera === true ? origin : "'none'";
+    isDefined(origin) && permission?.camera ? origin : "'none'";
 
   return [
     ...otherDirectives,

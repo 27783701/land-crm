@@ -1,26 +1,22 @@
 import { FrontComponentIframeOwnerContext } from '@/front-components/media-session/contexts/FrontComponentIframeOwnerContext';
 import { ManagedIframe } from '@/media-access/components/ManagedIframe';
-import { useQuery } from '@apollo/client/react';
-import { type IframeHTMLAttributes, useContext, useId } from 'react';
+import { useWorkspaceIframeMediaPermissions } from '@/media-access/hooks/useWorkspaceIframeMediaPermissions';
+import { useContext, useId } from 'react';
 import {
   type FrontComponentIframeHostProps,
   getRequestedIframeMediaCapabilities,
 } from 'twenty-front-component-renderer';
 import { isDefined } from 'twenty-shared/utils';
-import { GetWorkspaceIframeMediaPermissionsDocument } from '~/generated-metadata/graphql';
 
 type FrontComponentManagedIframeProps = FrontComponentIframeHostProps;
 
 export const FrontComponentManagedIframe = ({
-  iframeProps,
+  iframeProps: props,
   iframeRef,
 }: FrontComponentManagedIframeProps) => {
   const owner = useContext(FrontComponentIframeOwnerContext);
   const iframeId = useId();
-  const { data, error } = useQuery(GetWorkspaceIframeMediaPermissionsDocument, {
-    fetchPolicy: 'cache-and-network',
-  });
-  const props = iframeProps as IframeHTMLAttributes<HTMLIFrameElement>;
+  const iframeMediaPermissions = useWorkspaceIframeMediaPermissions();
 
   if (!isDefined(owner)) {
     return null;
@@ -31,11 +27,7 @@ export const FrontComponentManagedIframe = ({
       iframeId={iframeId}
       iframeRef={iframeRef}
       owner={owner}
-      iframeMediaPermissions={
-        isDefined(error)
-          ? []
-          : (data?.currentWorkspace.iframeMediaPermissions ?? [])
-      }
+      iframeMediaPermissions={iframeMediaPermissions}
       requestedMediaCapabilities={getRequestedIframeMediaCapabilities(
         props.allow,
       )}
