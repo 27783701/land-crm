@@ -77,6 +77,7 @@ const INBOX_ACTION_QUERIES: Record<
      SELECT thread.id, $2, thread."lastActivityAt", false FROM ${threadTable} thread WHERE thread.id = $1
      ON CONFLICT ("threadId", "workspaceMemberId") DO UPDATE SET
        "lastReadAt" = GREATEST(participant."lastReadAt", EXCLUDED."lastReadAt"),
+       "lastResolvedMentionAt" = ${ALL_MENTIONS_RESOLVED_AT},
        "updatedAt" = ${NEXT_PARTICIPANT_UPDATED_AT}
      RETURNING *`,
   [AgentChatInboxAction.UNREAD]: ({ participantTable }) =>

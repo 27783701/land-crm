@@ -1203,12 +1203,30 @@ describe('Chat thread participant state through the authenticated API', () => {
       before.openThreadCount + 1,
     );
   });
-  it('preserves unresolved mentions while reading, marking unread and snoozing', async () => {
+  it('resolves the mention when the member reads the chat and keeps it when they mark it unread', async () => {
     const threadId = await createTestThread();
 
     await addParticipants(threadId, [WORKSPACE_MEMBER_DATA_SEED_IDS.JONY]);
 
-    for (const action of ['READ', 'UNREAD', 'SNOOZE']) {
+    for (const action of ['READ', 'UNREAD']) {
+      const response = await runInboxAction(action, threadId, {
+        token: APPLE_JONY_MEMBER_ACCESS_TOKEN,
+      });
+      const participant = response.body.data.updateAgentChatThreadInboxState[0];
+
+      expect(response.body.errors).toBeUndefined();
+      expect(participant.lastResolvedMentionAt).toBe(
+        participant.lastMentionedAt,
+      );
+    }
+  });
+
+  it('preserves unresolved mentions while marking unread and snoozing', async () => {
+    const threadId = await createTestThread();
+
+    await addParticipants(threadId, [WORKSPACE_MEMBER_DATA_SEED_IDS.JONY]);
+
+    for (const action of ['UNREAD', 'SNOOZE']) {
       const response = await runInboxAction(action, threadId, {
         token: APPLE_JONY_MEMBER_ACCESS_TOKEN,
         snoozedUntil:

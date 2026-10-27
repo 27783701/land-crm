@@ -1649,13 +1649,34 @@ const createWorkspaceObjectTable = async ({
         });
       });
 
-      it('resolves Done while keeping Snooze and reading independent', async () => {
+      it('resolves the mention when the member reads the chat and keeps it when they mark it unread', async () => {
         const { participantService, memberThreadAccess, readParticipant } =
           await setUpMentionState();
         const before = await readParticipant();
 
         for (const action of [
           AgentChatInboxAction.READ,
+          AgentChatInboxAction.UNREAD,
+        ]) {
+          await participantService.updateInboxState({
+            ...memberThreadAccess,
+            threadIds: [memberThreadAccess.threadId],
+            action,
+            snoozedUntil: null,
+          });
+          expect(await readParticipant()).toMatchObject({
+            lastMentionedAt: before.lastMentionedAt,
+            lastResolvedMentionAt: before.lastMentionedAt,
+          });
+        }
+      });
+
+      it('resolves Done while keeping Snooze and marking unread independent', async () => {
+        const { participantService, memberThreadAccess, readParticipant } =
+          await setUpMentionState();
+        const before = await readParticipant();
+
+        for (const action of [
           AgentChatInboxAction.UNREAD,
           AgentChatInboxAction.SNOOZE,
         ]) {
@@ -1939,7 +1960,7 @@ const createWorkspaceObjectTable = async ({
         );
       });
 
-      it('backfills only proven recipient replies and stays idempotent', async () => {
+      it('backfills mentions the recipient read or replied to and stays idempotent', async () => {
         const { participantService } = await setUpMentionState();
         const mentionedAt = '2026-10-01T10:00:00.000Z';
         const repliedAt = '2026-10-01T11:00:00.000Z';
@@ -2004,11 +2025,13 @@ const createWorkspaceObjectTable = async ({
 
           return thread.id;
         };
-        const resolvedThreadId = await createHistoricalMention({
-          reply: { createdAt: repliedAt, senderWorkspaceMemberId: MEMBER_ID },
-        });
-        const unresolvedThreadIds = [
+        const resolvedThreadIds = [
+          await createHistoricalMention({
+            reply: { createdAt: repliedAt, senderWorkspaceMemberId: MEMBER_ID },
+          }),
           await createHistoricalMention({ lastReadAt: repliedAt }),
+        ];
+        const unresolvedThreadIds = [
           await createHistoricalMention({
             reply: {
               createdAt: repliedAt,
@@ -2059,16 +2082,18 @@ const createWorkspaceObjectTable = async ({
           dataSource.query<AgentChatThreadParticipantRow[]>(
             `SELECT * FROM "${SCHEMA}"."agentChatThreadParticipant"
              WHERE "threadId" = ANY($1::uuid[]) ORDER BY "threadId"`,
-            [[resolvedThreadId, ...unresolvedThreadIds]],
+            [[...resolvedThreadIds, ...unresolvedThreadIds]],
           );
 
         await command.up(args);
 
         const firstRun = await readResolutions();
 
-        expect(
-          firstRun.find(({ threadId }) => threadId === resolvedThreadId),
-        ).toMatchObject({ lastResolvedMentionAt: new Date(mentionedAt) });
+        for (const threadId of resolvedThreadIds) {
+          expect(
+            firstRun.find((participant) => participant.threadId === threadId),
+          ).toMatchObject({ lastResolvedMentionAt: new Date(mentionedAt) });
+        }
 
         for (const threadId of unresolvedThreadIds) {
           expect(
@@ -2095,7 +2120,6 @@ const createWorkspaceObjectTable = async ({
           action: AgentChatInboxAction.ARCHIVE,
           snoozedUntil: null,
         });
-        await participantService.markAsMentioned(memberThreadAccess);
         await dataSource.query(
           `UPDATE "${SCHEMA}"."agentChatThread" SET "lastActivityAt" = clock_timestamp(), "lastMessageSenderWorkspaceMemberId" = NULL WHERE id = $1`,
           [memberThreadAccess.threadId],
@@ -2106,6 +2130,7 @@ const createWorkspaceObjectTable = async ({
           action: AgentChatInboxAction.READ,
           snoozedUntil: null,
         });
+        await participantService.markAsMentioned(memberThreadAccess);
         participantEvents.emitParticipantWritten.mockClear();
 
         await expect(

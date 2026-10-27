@@ -28,7 +28,7 @@ const PARTICIPANT_BATCH_SIZE = 1000;
 @Command({
   name: 'upgrade:2-53:add-chat-mention-resolution',
   description:
-    'Track resolved chat mentions, recover proven historical replies and end due snoozes',
+    'Track resolved chat mentions, resolve historical mentions already read or replied to, and end due snoozes',
 })
 export class AddChatMentionResolutionCommand extends ProvisionedWorkspaceCommandRunner {
   constructor(
@@ -64,7 +64,7 @@ export class AddChatMentionResolutionCommand extends ProvisionedWorkspaceCommand
 
     if (options.dryRun) {
       this.logger.log(
-        `[DRY RUN] Workspace ${workspaceId}: add mention resolution and recover mentions answered by their recipient`,
+        `[DRY RUN] Workspace ${workspaceId}: add mention resolution and resolve mentions their recipient read or replied to`,
       );
 
       return;
@@ -94,7 +94,7 @@ export class AddChatMentionResolutionCommand extends ProvisionedWorkspaceCommand
       });
     }
 
-    await this.resolveProvenHistoricalReplies(workspaceId);
+    await this.resolveHistoricalReadOrRepliedMentions(workspaceId);
     await this.endDueSnoozes(workspaceId);
   }
 
@@ -153,7 +153,8 @@ export class AddChatMentionResolutionCommand extends ProvisionedWorkspaceCommand
     }
   }
 
-  private async resolveProvenHistoricalReplies(
+  // A mention clears lastReadAt, so a read time means the member read the chat after it
+  private async resolveHistoricalReadOrRepliedMentions(
     workspaceId: string,
   ): Promise<void> {
     const schema = escapeIdentifier(getWorkspaceSchemaName(workspaceId));
@@ -162,14 +163,14 @@ export class AddChatMentionResolutionCommand extends ProvisionedWorkspaceCommand
       const [{ candidateCount }] = await this.dataSource.query<
         { candidateCount: number }[]
       >(
-        `WITH answered_mentions AS (
+        `WITH handled_mentions AS (
            SELECT participant.id, participant."lastMentionedAt"
            FROM ${schema}."agentChatThreadParticipant" participant
            WHERE participant."deletedAt" IS NULL
              AND participant."lastMentionedAt" IS NOT NULL
              AND (participant."lastResolvedMentionAt" IS NULL
                OR participant."lastMentionedAt" > participant."lastResolvedMentionAt")
-             AND EXISTS (
+             AND (participant."lastReadAt" IS NOT NULL OR EXISTS (
                SELECT 1 FROM ${schema}."agentMessage" message
                JOIN ${schema}."agentTurn" member_turn
                  ON member_turn.id = message."turnId"
@@ -181,20 +182,20 @@ export class AddChatMentionResolutionCommand extends ProvisionedWorkspaceCommand
                  AND message.role = 'user'
                  AND message."deletedAt" IS NULL
                  AND message."createdAt" > participant."lastMentionedAt"
-             )
+             ))
            ORDER BY participant.id
            LIMIT ${PARTICIPANT_BATCH_SIZE}
          ), resolved_mentions AS (
          UPDATE ${schema}."agentChatThreadParticipant" participant
-         SET "lastResolvedMentionAt" = answered_mentions."lastMentionedAt", "updatedAt" = GREATEST(clock_timestamp(), participant."updatedAt" + interval '1 millisecond')
-         FROM answered_mentions
-         WHERE participant.id = answered_mentions.id
-           AND participant."lastMentionedAt" = answered_mentions."lastMentionedAt"
+         SET "lastResolvedMentionAt" = handled_mentions."lastMentionedAt", "updatedAt" = GREATEST(clock_timestamp(), participant."updatedAt" + interval '1 millisecond')
+         FROM handled_mentions
+         WHERE participant.id = handled_mentions.id
+           AND participant."lastMentionedAt" = handled_mentions."lastMentionedAt"
            AND (participant."lastResolvedMentionAt" IS NULL
-             OR participant."lastResolvedMentionAt" < answered_mentions."lastMentionedAt")
+             OR participant."lastResolvedMentionAt" < handled_mentions."lastMentionedAt")
          RETURNING participant.id
          )
-         SELECT COUNT(*)::int AS "candidateCount" FROM answered_mentions`,
+         SELECT COUNT(*)::int AS "candidateCount" FROM handled_mentions`,
       );
 
       if (candidateCount < PARTICIPANT_BATCH_SIZE) {

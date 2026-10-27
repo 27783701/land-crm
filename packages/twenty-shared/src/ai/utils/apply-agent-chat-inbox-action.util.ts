@@ -41,6 +41,7 @@ export const applyAgentChatInboxAction = ({
             new Date(state.lastReadAt) > new Date(threadLastActivityAt))
             ? state.lastReadAt
             : threadLastActivityAt,
+        lastResolvedMentionAt: getAgentChatResolvedMentionAt(state),
       };
     case 'UNREAD':
       return { ...state, lastReadAt: null };

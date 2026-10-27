@@ -239,16 +239,16 @@ describe('2-53 workspace command - add chat mention resolution (integration)', (
     });
   });
 
-  it('adds the field and resolves only retained replies authored by the recipient after their mention', async () => {
+  it('adds the field and resolves mentions the recipient read or replied to after them', async () => {
     const recipientReply = {
       createdAt: REPLIED_AT,
       senderWorkspaceMemberId: WORKSPACE_MEMBER_DATA_SEED_IDS.JONY,
     };
-    const resolvedParticipantId = await createHistoricalMention({
-      reply: recipientReply,
-    });
-    const unresolvedParticipantIds = [
+    const resolvedParticipantIds = [
+      await createHistoricalMention({ reply: recipientReply }),
       await createHistoricalMention({ lastReadAt: REPLIED_AT }),
+    ];
+    const unresolvedParticipantIds = [
       await createHistoricalMention({
         reply: {
           ...recipientReply,
@@ -287,10 +287,9 @@ describe('2-53 workspace command - add chat mention resolution (integration)', (
     });
     expect(await readResolutions()).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({
-          id: resolvedParticipantId,
-          lastResolvedMentionAt: MENTIONED_AT,
-        }),
+        ...resolvedParticipantIds.map((id) =>
+          expect.objectContaining({ id, lastResolvedMentionAt: MENTIONED_AT }),
+        ),
         ...unresolvedParticipantIds.map((id) =>
           expect.objectContaining({ id, lastResolvedMentionAt: null }),
         ),

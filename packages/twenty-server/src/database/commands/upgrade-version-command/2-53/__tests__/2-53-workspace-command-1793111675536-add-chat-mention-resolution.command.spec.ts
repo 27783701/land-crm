@@ -58,7 +58,7 @@ describe('AddChatMentionResolutionCommand', () => {
 
     expect(
       query.mock.calls.filter(([sql]: [string]) =>
-        sql.includes('answered_mentions'),
+        sql.includes('handled_mentions'),
       ),
     ).toHaveLength(2);
   });

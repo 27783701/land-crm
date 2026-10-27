@@ -96,7 +96,7 @@ describe('applyAgentChatInboxAction', () => {
     ).toEqual(expected);
   });
 
-  it.each<AgentChatInboxAction>(['ARCHIVE', 'UNSUBSCRIBE'])(
+  it.each<AgentChatInboxAction>(['READ', 'ARCHIVE', 'UNSUBSCRIBE'])(
     'resolves the recorded mention on %s',
     (action) => {
       expect(
@@ -127,7 +127,6 @@ describe('applyAgentChatInboxAction', () => {
   });
 
   it.each<AgentChatInboxAction>([
-    'READ',
     'UNREAD',
     'SNOOZE',
     'MOVE_TO_INBOX',
