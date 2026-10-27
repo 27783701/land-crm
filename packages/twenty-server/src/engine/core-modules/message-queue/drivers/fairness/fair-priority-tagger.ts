@@ -19,6 +19,7 @@ export type FairTicket = { tag: number; weight: number };
 
 type FairPriorityTaggerOptions = {
   getClient: (queueName: MessageQueue) => Promise<RedisClient>;
+  getJobKey: (job: { queueName: MessageQueue; jobId: string }) => string;
   keyPrefix: string;
 };
 
@@ -122,14 +123,18 @@ export class FairPriorityTagger {
       await this.runScript({
         queueName,
         script: FAIR_DISPATCH_SCRIPT,
-        keys: [this.buildFairKey({ queueName, suffix: 'vtime' })],
-        args: [
-          this.buildQueueKey({ queueName, suffix: jobId }),
-          FAIR_TICKET_OFFSET,
+        keys: [
+          this.buildFairKey({ queueName, suffix: 'vtime' }),
+          this.options.getJobKey({ queueName, jobId }),
         ],
+        args: [FAIR_TICKET_OFFSET],
       });
     } catch (error) {
-      this.warn({ queueName, action: 'record the fair dispatch', error });
+      this.warn({
+        queueName,
+        action: `record the fair dispatch of job ${jobId}`,
+        error,
+      });
     }
   }
 

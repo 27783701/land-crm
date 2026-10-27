@@ -52,6 +52,7 @@ const createTagger = async () => {
     redis,
     tagger: new FairPriorityTagger({
       getClient: async () => client as never,
+      getJobKey: ({ jobId }) => `${QUEUE_KEY_PREFIX}${jobId}`,
       keyPrefix: KEY_PREFIX,
     }),
     readClock: async (groupKey: string) =>
@@ -67,6 +68,7 @@ const createBrokenTagger = () =>
     getClient: async () => {
       throw new Error('Redis connection lost');
     },
+    getJobKey: ({ jobId }) => `${QUEUE_KEY_PREFIX}${jobId}`,
     keyPrefix: KEY_PREFIX,
   });
 

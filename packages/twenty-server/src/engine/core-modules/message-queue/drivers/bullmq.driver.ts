@@ -87,6 +87,8 @@ export class BullMQDriver
   ) {
     this.fairPriorityTagger = new FairPriorityTagger({
       getClient: (queueName) => this.queueMap[queueName].client,
+      getJobKey: ({ queueName, jobId }) =>
+        this.queueMap[queueName].toKey(jobId),
       keyPrefix: options.prefix ?? 'bull',
     });
   }
@@ -389,7 +391,7 @@ export class BullMQDriver
     job,
   }: {
     queueName: MessageQueue;
-    job: Job;
+    job: Pick<Job, 'id'>;
   }): void {
     if (!this.isFairnessEnabled() || !isDefined(job.id)) {
       return;
