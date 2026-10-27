@@ -6,10 +6,11 @@ import { Button, Switch } from 'twenty-ui/primitives/input';
 import { Text } from 'twenty-ui/primitives/typography';
 import { themeCssVariables } from 'twenty-ui/theme';
 
+import { useSaveIframeMediaPermission } from '@/settings/security/hooks/useSaveIframeMediaPermission';
+
 type SettingsSecurityIframeMediaPermissionRowProps = {
   permission: IframeMediaPermission;
   disabled: boolean;
-  onSave: (permission: IframeMediaPermission) => Promise<boolean>;
 };
 
 const StyledRow = styled.div`
@@ -34,9 +35,9 @@ const StyledLabel = styled.label`
 export const SettingsSecurityIframeMediaPermissionRow = ({
   permission,
   disabled,
-  onSave,
 }: SettingsSecurityIframeMediaPermissionRowProps) => {
   const { t } = useLingui();
+  const { savePermission } = useSaveIframeMediaPermission();
   const { origin, microphone, camera } = permission;
 
   return (
@@ -49,7 +50,7 @@ export const SettingsSecurityIframeMediaPermissionRow = ({
             disabled={disabled}
             size="sm"
             onCheckedChange={(checked) =>
-              void onSave({ origin, microphone: checked, camera })
+              void savePermission({ origin, microphone: checked, camera })
             }
           />
           <Text render={<span />}>{t`Microphone`}</Text>
@@ -60,7 +61,7 @@ export const SettingsSecurityIframeMediaPermissionRow = ({
             disabled={disabled}
             size="sm"
             onCheckedChange={(checked) =>
-              void onSave({ origin, microphone, camera: checked })
+              void savePermission({ origin, microphone, camera: checked })
             }
           />
           <Text render={<span />}>{t`Camera`}</Text>
@@ -72,7 +73,7 @@ export const SettingsSecurityIframeMediaPermissionRow = ({
           variant="outline"
           startIcon={<IconTrash size={16} />}
           onClick={() =>
-            void onSave({ origin, microphone: false, camera: false })
+            void savePermission({ origin, microphone: false, camera: false })
           }
         >
           {t`Remove`}

@@ -13,6 +13,7 @@ import { themeCssVariables } from 'twenty-ui/theme';
 import { getToastOptionsFromError } from '@/error-handler/utils/getToastOptionsFromError';
 import { SettingsSecurityIframeMediaPermissionForm } from '@/settings/security/components/SettingsSecurityIframeMediaPermissionForm';
 import { SettingsSecurityIframeMediaPermissionRow } from '@/settings/security/components/SettingsSecurityIframeMediaPermissionRow';
+import { SettingsSecurityIframeMediaPermissionsContext } from '@/settings/security/contexts/SettingsSecurityIframeMediaPermissionsContext';
 import {
   GetWorkspaceIframeMediaPermissionsDocument,
   UpdateWorkspaceIframeMediaPermissionsDocument,
@@ -81,19 +82,21 @@ export const SettingsSecurityIframeMediaPermissions = () => {
             <Button onClick={() => void refetch()}>{t`Retry`}</Button>
           </>
         )}
-        {permissions.map((permission) => (
-          <SettingsSecurityIframeMediaPermissionRow
-            key={permission.origin}
-            permission={permission}
+        <SettingsSecurityIframeMediaPermissionsContext.Provider
+          value={{ savePermission }}
+        >
+          {permissions.map((permission) => (
+            <SettingsSecurityIframeMediaPermissionRow
+              key={permission.origin}
+              permission={permission}
+              disabled={isDisabled}
+            />
+          ))}
+          <SettingsSecurityIframeMediaPermissionForm
             disabled={isDisabled}
-            onSave={savePermission}
+            permissions={permissions}
           />
-        ))}
-        <SettingsSecurityIframeMediaPermissionForm
-          disabled={isDisabled}
-          permissions={permissions}
-          onSave={savePermission}
-        />
+        </SettingsSecurityIframeMediaPermissionsContext.Provider>
         {hasSavedChanges && (
           <>
             <Text role="status">{t`Changes saved. Reload open Twenty tabs to apply the updated permissions. Reloading ends active calls and recordings.`}</Text>

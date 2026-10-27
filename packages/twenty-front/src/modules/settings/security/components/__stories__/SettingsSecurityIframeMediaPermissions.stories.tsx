@@ -4,6 +4,12 @@ import { graphql, HttpResponse } from 'msw';
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test';
 import { type IframeMediaPermission } from 'twenty-shared/types';
 import { ComponentDecorator } from 'twenty-ui/testing';
+import {
+  type GetWorkspaceIframeMediaPermissionsQuery,
+  type GetWorkspaceIframeMediaPermissionsQueryVariables,
+  type UpdateWorkspaceIframeMediaPermissionsMutation,
+  type UpdateWorkspaceIframeMediaPermissionsMutationVariables,
+} from '~/generated-metadata/graphql';
 import { ToastDecorator } from '~/testing/decorators/ToastDecorator';
 
 const WORKSPACE_ID = 'iframe-media-settings-workspace';
@@ -11,14 +17,15 @@ const ORIGIN = 'https://workspace.aircall.io';
 const saveRequest = fn();
 let permissions: IframeMediaPermission[] = [];
 
-const getWorkspace = () => ({
-  __typename: 'Workspace',
-  id: WORKSPACE_ID,
-  iframeMediaPermissions: permissions.map((permission) => ({
-    __typename: 'IframeMediaPermission',
-    ...permission,
-  })),
-});
+const getWorkspace =
+  (): GetWorkspaceIframeMediaPermissionsQuery['currentWorkspace'] => ({
+    __typename: 'Workspace',
+    id: WORKSPACE_ID,
+    iframeMediaPermissions: permissions.map((permission) => ({
+      __typename: 'IframeMediaPermission',
+      ...permission,
+    })),
+  });
 
 const meta: Meta<typeof SettingsSecurityIframeMediaPermissions> = {
   title: 'Modules/Settings/Security/IframeMediaPermissions',
@@ -31,28 +38,31 @@ const meta: Meta<typeof SettingsSecurityIframeMediaPermissions> = {
   parameters: {
     msw: {
       handlers: [
-        graphql.query('GetWorkspaceIframeMediaPermissions', () =>
+        graphql.query<
+          GetWorkspaceIframeMediaPermissionsQuery,
+          GetWorkspaceIframeMediaPermissionsQueryVariables
+        >('GetWorkspaceIframeMediaPermissions', () =>
           HttpResponse.json({ data: { currentWorkspace: getWorkspace() } }),
         ),
-        graphql.mutation(
-          'UpdateWorkspaceIframeMediaPermissions',
-          ({ variables }) => {
-            const permission = variables.input as IframeMediaPermission;
-            saveRequest(permission);
-            permissions = permissions.filter(
-              (existingPermission) =>
-                existingPermission.origin !== permission.origin,
-            );
+        graphql.mutation<
+          UpdateWorkspaceIframeMediaPermissionsMutation,
+          UpdateWorkspaceIframeMediaPermissionsMutationVariables
+        >('UpdateWorkspaceIframeMediaPermissions', ({ variables }) => {
+          const permission = variables.input;
+          saveRequest(permission);
+          permissions = permissions.filter(
+            (existingPermission) =>
+              existingPermission.origin !== permission.origin,
+          );
 
-            if (permission.microphone || permission.camera) {
-              permissions.push(permission);
-            }
+          if (permission.microphone || permission.camera) {
+            permissions.push(permission);
+          }
 
-            return HttpResponse.json({
-              data: { updateWorkspaceIframeMediaPermissions: getWorkspace() },
-            });
-          },
-        ),
+          return HttpResponse.json({
+            data: { updateWorkspaceIframeMediaPermissions: getWorkspace() },
+          });
+        }),
       ],
     },
   },
