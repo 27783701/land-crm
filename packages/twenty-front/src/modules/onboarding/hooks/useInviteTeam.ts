@@ -137,18 +137,7 @@ export const useInviteTeam = () => {
     return () => subscription.unsubscribe();
   }, [watch, append, remove, store]);
 
-  const getPlaceholder = (emailIndex: number) => {
-    if (emailIndex === 0) {
-      return 'tim@apple.com';
-    }
-    if (emailIndex === 1) {
-      return 'phil@apple.com';
-    }
-    if (emailIndex === 2) {
-      return 'jony@apple.com';
-    }
-    return 'craig@apple.com';
-  };
+  const getPlaceholder = (_emailIndex: number) => 'Электронная почта';
 
   const onSubmit: SubmitHandler<InviteTeamFormInput> = useCallback(
     async (data) => {
