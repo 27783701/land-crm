@@ -37,6 +37,19 @@ const StyledAnimatedContainer = styled.div<{
   max-height: 100%;
   overflow: clip;
   position: relative;
+  background: linear-gradient(165deg, #082d29 0%, #0a3832 55%, #061e1c 100%);
+  color: #f3faf7;
+  border-right: 1px solid rgba(255, 255, 255, 0.09);
+
+  /* Land CRM: style native Twenty navigation without replacing its behavior. */
+  & a, & button {
+    color: inherit;
+  }
+
+  & a:hover, & button:hover {
+    background-color: rgba(255, 255, 255, 0.07);
+  }
+
   transition: ${({ isResizing }) =>
     isResizing
       ? 'none'
@@ -60,6 +73,7 @@ const StyledContainer = styled.div<{
   flex-direction: column;
   height: 100%;
   padding-bottom: ${themeCssVariables.spacing[4]};
+  background: transparent;
   width: ${({ isExpanded }) =>
     isExpanded ? `var(${NAVIGATION_DRAWER_WIDTH_VAR})` : '100%'};
   @media (max-width: ${MOBILE_VIEWPORT}px) {
