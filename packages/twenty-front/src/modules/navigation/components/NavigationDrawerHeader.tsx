@@ -36,7 +36,7 @@ const StyledBrand = styled.div`
   font-weight: 700;
   letter-spacing: -0.35px;
   white-space: nowrap;
-  padding: 0 12px 0 10px;
+  padding: 17px 16px 9px;
 `;
 
 const StyledCollapsedSearch = styled.div`
@@ -80,8 +80,8 @@ export const NavigationDrawerHeader = () => {
 
   return (
     <StyledContainer>
+      {isExpanded && !isMobile && <StyledBrand>Land CRM</StyledBrand>}
       <StyledHeaderRow>
-        {isExpanded && !isMobile && <StyledBrand>Land CRM</StyledBrand>}
         <StyledWorkspaceDropdownContainer>
           <MultiWorkspaceDropdownButton />
         </StyledWorkspaceDropdownContainer>
