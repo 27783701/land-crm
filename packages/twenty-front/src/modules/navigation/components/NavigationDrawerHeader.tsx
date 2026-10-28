@@ -19,7 +19,7 @@ const StyledContainer = styled.div`
 
 const StyledHeaderRow = styled.div`
   align-items: center;
-  border-bottom: 1px solid ${themeCssVariables.border.color.medium};
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   box-sizing: border-box;
   display: flex;
   height: ${APP_HEADER_HEIGHT}px;
@@ -28,6 +28,15 @@ const StyledHeaderRow = styled.div`
   @media (max-width: ${MOBILE_VIEWPORT}px) {
     padding: 0 ${themeCssVariables.spacing[7]};
   }
+`;
+
+const StyledBrand = styled.div`
+  color: #f4fcf8;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.35px;
+  white-space: nowrap;
+  padding: 0 12px 0 10px;
 `;
 
 const StyledCollapsedSearch = styled.div`
@@ -72,6 +81,7 @@ export const NavigationDrawerHeader = () => {
   return (
     <StyledContainer>
       <StyledHeaderRow>
+        {isExpanded && !isMobile && <StyledBrand>Land CRM</StyledBrand>}
         <StyledWorkspaceDropdownContainer>
           <MultiWorkspaceDropdownButton />
         </StyledWorkspaceDropdownContainer>
