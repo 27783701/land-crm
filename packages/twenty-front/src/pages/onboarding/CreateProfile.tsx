@@ -267,7 +267,7 @@ export const CreateProfile = () => {
                       onChange(firstName);
                       setCreateProfileDraftFromForm();
                     }}
-                    placeholder={t`Tim`}
+                    placeholder="Александр"
                     error={error?.message}
                     fullWidth
                   />
@@ -294,7 +294,7 @@ export const CreateProfile = () => {
                       onChange(lastName);
                       setCreateProfileDraftFromForm();
                     }}
-                    placeholder={t`Apple`}
+                    placeholder="Москвичев"
                     error={error?.message}
                     fullWidth
                   />
