@@ -14,6 +14,14 @@ const StyledTr = styled.div<{
 
   position: relative;
 
+  /* Land CRM: a clear row affordance without card borders or rounded wrappers. */
+  &:hover:not([data-focused='true']):not([data-active='true']) {
+    div.table-cell,
+    div.table-cell-0-0 {
+      background-color: ${themeCssVariables.background.secondary};
+    }
+  }
+
   &[data-focused='true'],
   &[data-active='true'] {
     div.table-cell,
