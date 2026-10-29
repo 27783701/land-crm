@@ -1,4 +1,8 @@
 import { type ReactNode } from 'react';
+import { t } from '@lingui/core/macro';
+import { LightIconButton } from 'twenty-ui/components/input';
+import { IconSearch } from 'twenty-ui/icon';
+import { useOpenRecordsSearchPageInSidePanel } from '@/side-panel/hooks/useOpenRecordsSearchPageInSidePanel';
 
 import { ObjectSortDropdownButton } from '@/object-record/object-sort-dropdown/components/ObjectSortDropdownButton';
 import { useRecordIndexContextOrThrow } from '@/object-record/record-index/contexts/RecordIndexContext';
@@ -36,6 +40,7 @@ export const ViewBar = ({
   isReadOnly = false,
 }: ViewBarProps) => {
   const { objectNamePlural, recordIndexId } = useRecordIndexContextOrThrow();
+  const { openRecordsSearchPage } = useOpenRecordsSearchPageInSidePanel();
 
   if (!objectNamePlural) {
     return;
@@ -65,6 +70,15 @@ export const ViewBar = ({
         leftComponent={<ViewPickerDropdown />}
         rightComponent={
           <>
+            <LightIconButton
+              emphasis="standard"
+              size="sm"
+              onClick={openRecordsSearchPage}
+              aria-label={t`Search records`}
+              title={t`Search records`}
+            >
+              <IconSearch />
+            </LightIconButton>
             <ObjectFilterDropdownComponentInstanceContext.Provider
               value={{ instanceId: getViewBarFilterDropdownId(recordIndexId) }}
             >
