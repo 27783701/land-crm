@@ -15,7 +15,8 @@ const StyledContainer = styled.div`
   display: flex;
   flex-direction: column;
 
-  margin-left: ${themeCssVariables.spacing[2]};
+  margin-left: 0;
+  width: 100%;
 `;
 
 const StyledTopBar = styled.div`
@@ -26,22 +27,28 @@ const StyledTopBar = styled.div`
   display: flex;
   flex-direction: row;
   font-weight: ${themeCssVariables.font.weight.medium};
-  height: 39px;
+  min-height: 48px;
   justify-content: space-between;
-  margin-left: ${themeCssVariables.spacing[1]};
-  padding-right: ${themeCssVariables.spacing[2]};
+  gap: ${themeCssVariables.spacing[3]};
+  padding: 0 ${themeCssVariables.spacing[4]};
 
   z-index: 7;
 `;
 
 const StyledLeftSection = styled.div`
+  align-items: center;
   display: flex;
+  min-width: 0;
 `;
 
 const StyledRightSection = styled.div`
+  align-items: center;
   display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
   font-weight: ${themeCssVariables.font.weight.regular};
-  gap: ${themeCssVariables.betweenSiblingsGap};
+  gap: ${themeCssVariables.spacing[2]};
+  justify-content: flex-end;
 `;
 
 export const TopBar = ({
